@@ -1,0 +1,57 @@
+/**
+ * User Menu Styles
+ * Estilos para o menu do usuário em todas as páginas
+ */
+
+/* Classes para controle de visibilidade */
+.login-only {
+  display: block;
+}
+
+.user-only {
+  display: none;
+}
+
+/* Estilos do menu do usuário */
+.user-menu {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.user-name {
+  color: #e5e7eb;
+  font-weight: 500;
+  font-size: 0.9rem;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  white-space: nowrap;
+}
+
+/* Responsividade */
+@media (max-width: 768px) {
+  .user-menu {
+    flex-direction: column;
+    gap: 4px;
+  }
+  
+  .user-name {
+    font-size: 0.8rem;
+    padding: 6px 10px;
+    text-align: center;
+  }
+  
+  .header-actions {
+    flex-direction: column;
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .user-name {
+    font-size: 0.75rem;
+    padding: 4px 8px;
+  }
+}

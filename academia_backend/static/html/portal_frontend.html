@@ -1,0 +1,203 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal do Aluno - AthleTech</title>
+  <meta name="description" content="Portal do aluno da AthleTech: perfil, treinos, avaliações e exercícios.">
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/portal.css' %}">
+  <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+</head>
+<body>
+  <header class="portal-header">
+    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Portal do Aluno</div>
+    <nav class="header-actions">
+      <a href="/" class="btn small">Início</a>
+      <div class="user-menu">
+        <span id="user-name" class="user-name">Carregando...</span>
+        <a href="/login/" class="btn small alt" id="logout-btn">Sair</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="portal-layout">
+    <aside class="sidebar">
+      <a href="#perfil" class="item active"><i class="fa-regular fa-user"></i> Perfil</a>
+      <a href="#treinos" class="item"><i class="fa-solid fa-dumbbell"></i> Treinos</a>
+      <a href="#avaliacoes" class="item"><i class="fa-regular fa-clipboard"></i> Avaliações</a>
+      <a href="#exercicios" class="item"><i class="fa-solid fa-list-check"></i> Exercícios</a>
+    </aside>
+
+    <main class="content">
+      <section id="perfil" class="card">
+        <div class="card-head">
+          <h2>Informações Pessoais</h2>
+          <button id="btn-editar" class="btn small">Editar</button>
+        </div>
+        <div class="grid-2">
+          <div class="info">
+            <h3>Dados básicos</h3>
+            <ul class="kv">
+              <li><span>Nome</span><strong id="aluno-nome">Aluno Exemplo</strong></li>
+              <li><span>Email</span><strong id="aluno-email">aluno@example.com</strong></li>
+              <li><span>Telefone</span><strong id="aluno-telefone">(00) 00000-0000</strong></li>
+            </ul>
+          </div>
+          <div class="info">
+            <h3>Medidas</h3>
+            <ul class="kv">
+              <li><span>Peso</span><strong id="aluno-peso">80 kg</strong></li>
+              <li><span>Altura</span><strong id="aluno-altura">1,78 m</strong></li>
+              <li><span>IMC</span><strong id="aluno-imc">25,2</strong></li>
+            </ul>
+          </div>
+        </div>
+
+        <form id="form-perfil" class="edit-form hidden">
+          <div class="grid-3">
+            <div class="field">
+              <label for="f-nome">Nome</label>
+              <input id="f-nome" type="text" value="Aluno Exemplo">
+            </div>
+            <div class="field">
+              <label for="f-email">Email</label>
+              <input id="f-email" type="email" value="aluno@example.com">
+            </div>
+            <div class="field">
+              <label for="f-telefone">Telefone</label>
+              <input id="f-telefone" type="text" value="(00) 00000-0000">
+            </div>
+            <div class="field">
+              <label for="f-peso">Peso (kg)</label>
+              <input id="f-peso" type="number" step="0.1" value="80">
+            </div>
+            <div class="field">
+              <label for="f-altura">Altura (m)</label>
+              <input id="f-altura" type="number" step="0.01" value="1.78">
+            </div>
+            <div class="field">
+              <label>&nbsp;</label>
+              <button type="submit" class="btn">Salvar</button>
+            </div>
+          </div>
+          <p class="muted">Somente interface: os dados não são persistidos ainda.</p>
+        </form>
+      </section>
+
+      <section id="treinos" class="card">
+        <h2>Treinos</h2>
+        <div class="list">
+          <article class="row">
+            <div>
+              <h4>Treino A</h4>
+              <p>Peito • Tríceps • Abdômen</p>
+            </div>
+            <span class="tag">2x por semana</span>
+          </article>
+          <article class="row">
+            <div>
+              <h4>Treino B</h4>
+              <p>Costas • Bíceps</p>
+            </div>
+            <span class="tag">2x por semana</span>
+          </article>
+          <article class="row">
+            <div>
+              <h4>Treino C</h4>
+              <p>Pernas • Ombros</p>
+            </div>
+            <span class="tag">1x por semana</span>
+          </article>
+        </div>
+      </section>
+
+      <section id="avaliacoes" class="card">
+        <div class="card-head">
+          <h2>Avaliações</h2>
+          <span class="muted">Somente treinador pode adicionar</span>
+        </div>
+        <table class="table" id="tabela-avaliacoes">
+          <thead>
+            <tr><th>Data</th><th>Peso</th><th>Gordura %</th><th>Muscular %</th><th>Observações</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>12/01/2025</td><td>80 kg</td><td>18%</td><td>39%</td><td>Objetivo: definição</td></tr>
+            <tr><td>12/02/2025</td><td>78,5 kg</td><td>17%</td><td>40%</td><td>Evolução positiva</td></tr>
+          </tbody>
+        </table>
+      </section>
+
+      <section id="exercicios" class="card">
+        <div class="card-head">
+          <h2>Exercícios</h2>
+          <span class="muted">Somente treinador pode adicionar</span>
+        </div>
+        <div class="grid-3" id="lista-exercicios">
+          <div class="exercise">
+            <h4>Supino reto</h4>
+            <p>4x8-10 • Carga moderada</p>
+          </div>
+          <div class="exercise">
+            <h4>Remada curvada</h4>
+            <p>4x8-10 • Técnica controlada</p>
+          </div>
+          <div class="exercise">
+            <h4>Agachamento</h4>
+            <p>5x5 • Progressão semanal</p>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+
+  <script>
+    // Realce do item ativo ao rolar
+    const links = document.querySelectorAll('.sidebar .item');
+    const sections = Array.from(document.querySelectorAll('main section'));
+    function highlight() {
+      const y = window.scrollY + 100;
+      let current = sections[0].id;
+      for (const s of sections) {
+        if (y >= s.offsetTop) current = s.id;
+      }
+      links.forEach(a => a.classList.toggle('active', a.getAttribute('href') === '#' + current));
+    }
+    document.addEventListener('scroll', highlight);
+    highlight();
+
+    // Editar perfil (somente UI)
+    const formPerfil = document.getElementById('form-perfil');
+    document.getElementById('btn-editar').addEventListener('click', () => {
+      formPerfil.classList.toggle('hidden');
+    });
+    formPerfil.addEventListener('submit', (e) => {
+      e.preventDefault();
+      const nome = document.getElementById('f-nome').value.trim();
+      const email = document.getElementById('f-email').value.trim();
+      const telefone = document.getElementById('f-telefone').value.trim();
+      const peso = parseFloat(document.getElementById('f-peso').value);
+      const altura = parseFloat(document.getElementById('f-altura').value);
+      const imc = altura > 0 ? (peso / (altura*altura)) : 0;
+      if (nome) document.getElementById('aluno-nome').textContent = nome;
+      if (email) document.getElementById('aluno-email').textContent = email;
+      if (telefone) document.getElementById('aluno-telefone').textContent = telefone;
+      if (!isNaN(peso)) document.getElementById('aluno-peso').textContent = `${peso.toFixed(1)} kg`;
+      if (!isNaN(altura)) document.getElementById('aluno-altura').textContent = `${altura.toFixed(2)} m`;
+      if (imc) document.getElementById('aluno-imc').textContent = imc.toFixed(1);
+      formPerfil.classList.add('hidden');
+    });
+  </script>
+  <script>
+    window.API_CONFIG = {
+      API_BASE_URL: "/api"
+    };
+  </script>
+  <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/portal.js' %}"></script>
+</body>
+</html>
+
+

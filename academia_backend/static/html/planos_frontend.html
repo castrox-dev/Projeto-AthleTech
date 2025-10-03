@@ -1,0 +1,81 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Planos e Preços - AthleTech</title>
+  <meta name="description" content="Conheça os planos da AthleTech e escolha o melhor para você.">
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/planos.css' %}">
+</head>
+<body>
+  <header class="portal-header">
+    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Planos</div>
+    <nav class="header-actions">
+      <a href="/" class="btn small">Início</a>
+      <div class="login-only">
+        <a href="/login/" class="btn small">Login</a>
+      </div>
+      <div class="user-only" style="display: none;">
+        <div class="user-menu">
+          <span id="user-name" class="user-name">Carregando...</span>
+          <a href="#" id="logout-btn" class="btn small alt">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+
+  <main class="content" style="padding:20px">
+    <section class="card">
+      <h2>Planos</h2>
+      <div class="grid-3" style="margin-top:12px">
+        <div class="exercise">
+          <h3>Plano Básico</h3>
+          <p>“Comece sua evolução.” <br>
+            <br>✔️ Acesso livre à musculação e cardio<br>
+            ✔️ Treino de adaptação personalizado<br>
+            ✔️ App AthleTech com dicas de treino</p>
+            <div class="preco-e-botao">
+              <strong>R$ 99,90/mês</strong>
+              <a href="/checkout/?plano_id=1&preco=129.90&method=cartao&tier=mensal" class="btn">Assinar</a>
+            </div>
+          </div>
+        <div class="exercise">
+          <h3>Plano Premium</h3>
+          <p>"Resultados rápidos, do seu jeito." <br>
+            <br>✔️ Todos os benefícios do Básico<br>
+            ✔️ Acompanhamento mensal com personal trainer<br>
+            ✔️ Aulas coletivas inclusas (funcional, HIIT, spinning)<br>
+            ✔️ Avaliação física trimestral</p>
+            <div class="preco-e-botao">
+              <strong>R$ 129,90/mês</strong>
+              <a href="/checkout/?plano_id=1&preco=129.90&method=cartao&tier=mensal" class="btn">Assinar</a>
+            </div>
+          </div>
+        <div class="exercise">
+          <h3>Plano Elite</h3>
+          <p>"Performance máxima, evolução sem limites." <br>
+            <br>✔️ Todos os benefícios do Premium<br>
+            ✔️ Personal trainer dedicado 2x por semana<br>
+            ✔️ Nutricionista parceiro com plano personalizado<br>
+            ✔️ Suplementação básica inclusa<br>
+            ✔️ Área VIP e treinos avançados</p>
+            <div class="preco-e-botao">
+              <strong>R$ 149,90/mês</strong>
+              <a href="/checkout/?plano_id=1&preco=129.90&method=cartao&tier=mensal" class="btn">Assinar</a>
+            </div>
+          </div>
+      </div>
+    </section>
+  </main>
+  
+  <script>
+    window.API_CONFIG = {
+      API_BASE_URL: "/api"
+    };
+  </script>
+  <script src="{% static 'js/user-menu.js' %}"></script>
+</body>
+</html>
+

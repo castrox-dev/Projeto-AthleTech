@@ -1,0 +1,46 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Erro interno - AthleTech</title>
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/portal.css' %}">
+</head>
+<body>
+  <header class="portal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="brand" style="font-weight: 700; color: #e5e7eb;"><i class="fa-solid fa-dumbbell"></i> AthleTech • Erro 500</div>
+    <nav class="header-actions" style="display: flex; align-items: center; gap: 12px;">
+      <a href="/" class="btn small" style="background: rgb(0,31,84); color: #fff; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Início</a>
+      <div class="login-only">
+        <a href="/login/" class="btn small" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Login</a>
+      </div>
+      <div class="user-only" style="display: none;">
+        <div class="user-menu" style="display: flex; align-items: center; gap: 8px;">
+          <span id="user-name" class="user-name" style="color: #e5e7eb; font-weight: 500; font-size: 0.9rem; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">Carregando...</span>
+          <a href="#" id="logout-btn" class="btn small alt" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+  
+  <main class="forgot-container" style="min-height:60vh; margin-top: 80px;">
+    <section class="card" style="text-align:center">
+      <h1>Erro 500</h1>
+      <p>Ocorreu um erro inesperado. Tente novamente mais tarde.</p>
+      <div style="margin-top:12px">
+        <a href="/" class="btn">Voltar ao início</a>
+      </div>
+    </section>
+  </main>
+  
+  <script>
+    window.API_CONFIG = {
+      API_BASE_URL: "/api"
+    };
+  </script>
+  <script src="{% static 'js/user-menu.js' %}"></script>
+</body>
+</html>
+

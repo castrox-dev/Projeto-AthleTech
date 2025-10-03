@@ -1,0 +1,11 @@
+Django
+djangorestframework
+djangorestframework-simplejwt
+django-cors-headers
+python-decouple
+Pillow
+PyJWT
+whitenoise
+dj-database-url
+gunicorn
+psycopg2-binary

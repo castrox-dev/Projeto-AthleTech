@@ -1,0 +1,271 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="AthleTech - Academia com treinos, planos e portal do aluno.">
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>  
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+
+  <title>AthleTech - Início</title>
+</head>
+<body>
+  <header>
+    <nav id="navbar">
+      <i class="fa-solid fa-dumbbell" id="nav_logo"><span>ATHLETECH</span></i>
+
+      <ul id="nav_list">
+        <li class="nav-item active"><a href="#home">Início</a></li>
+        <li class="nav-item"><a href="#planos">Planos</a></li>
+        <li class="nav-item"><a href="#testimonials">Depoimentos</a></li>
+      </ul>
+
+      <div class="nav-buttons">
+        <div class="login-only">
+          <a href="{% url 'login' %}" class="btn-default">Login</a>
+          <a href="{% url 'cadastro' %}" class="btn-default">Cadastre-se</a>
+        </div>
+        <div class="user-only" style="display: none;">
+          <a href="{% url 'portal' %}" class="btn-default">Portal</a>
+          <div class="user-menu">
+            <span id="user-name" class="user-name">Carregando...</span>
+            <a href="#" id="logout-btn" class="btn-default">Sair</a>
+          </div>
+        </div>
+      </div>
+
+      <span id="nav-underline"></span>
+    </nav>
+  </header>
+
+  <main id="content">
+    <div class="shape"></div>
+    
+    <!-- Home -->
+    <section id="home">
+      <div id="cta">
+        <h2 class="title" id="cta-title">
+          Tecnologia e treino juntos para a sua melhor versão.
+        </h2>
+        <p class="descripition">
+          Na AthleTech, unimos inovação, ciência e performance para transformar seus treinos em resultados reais. Aqui você encontra equipamentos modernos, treinos inteligentes e acompanhamento profissional em um ambiente motivador. Seja qual for o seu objetivo — ganhar força, perder peso ou melhorar sua qualidade de vida — nós temos o plano certo para você evoluir todos os dias.
+        </p>
+
+        </div>
+
+      </div>
+
+      <div id="banner">
+        <img src="{% static 'images/banner.png' %}" alt="" class="banner">
+      </div>
+    </section>
+
+    <!-- Planos -->
+    <section id="planos" href="planos">
+      <h3 class="section-subtitle">Nossos Planos Disponíveis</h3>
+
+      <div id="dishes">
+
+        <!-- Card 1 -->
+        <div class="dish">
+          <img src="{% static 'images/planos.png' %}" alt="Imagem fundo Planos" class="dish-image" width="230" height="300">
+          <h2 class="dish-title">Plano Básico</h2>
+          <span class="dish-description">O essencial para começar sua evolução.</span>
+          <div class="dish-price">
+            <h4>R$ 99,90/mês</h4>
+            <button class="btn-default"> <a href="{% url 'planos' %}">
+              <i class="fa-solid fa-basket-shopping">
+
+                </i>Mais informações</button> </a>
+          </div>
+        </div>
+
+        <!-- Card 2 -->
+        <div class="dish">
+          <img src="{% static 'images/planos.png' %}" alt="Imagem fundo Planos" class="dish-image" width="230" height="300">
+          <h2 class="dish-title">Plano Premium</h2>
+          <span class="dish-description">O equilíbrio perfeito entre suporte e performance.</span>
+          <div class="dish-price">
+            <h4>R$ 149,90/mês</h4>
+            <button class="btn-default"> <a href="{% url 'planos' %}">
+              <i class="fa-solid fa-basket-shopping">
+
+                </i>Mais informações</button> </a>
+          </div>
+        </div>
+        <!-- Card 3 -->
+        <div class="dish">
+          <img src="{% static 'images/planos.png' %}" alt="Imagem fundo Planos" class="dish-image" width="230" height="300">
+          <h2 class="dish-title">Plano Elite</h2>
+          <span class="dish-description">Máxima performance com resultados sem limites.</span>
+          <div class="dish-price">
+            <h4>R$ 249,90/mês</h4>
+            <button class="btn-default"> <a href="{% url 'planos' %}">
+              <i class="fa-solid fa-basket-shopping">
+
+                </i>Mais informações</button> </a>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Depoimentos -->
+    <section id="testimonials">
+      <img src="{% static 'images/ramon-dino.png' %}" alt="" class="ramon-dino" id="ramon-dino">
+
+      <div id="testemonials_content">
+        <h2 class="section-title">Depoimentos</h2>
+        <h3 class="section-subtitle">Relatos dos nossos alunos</h3>
+
+        <div id="feedbacks">
+          <div class="feedback">
+            <img src="{% static 'images/avatares/avatar.png' %}" alt="" class="feedback-avatar">
+            <div class="feedback-content">
+              <p>
+                João Mendes – 29 anos
+
+              </p>
+              <p>
+                "Nunca gostei de academia, mas na AthleTech encontrei motivação de verdade. Os treinos são dinâmicos e os resultados apareceram rápido."
+              </p>
+            </div>
+          </div>
+
+          <div id="feedback">
+            <div class="feedback">
+              <img src="{% static 'images/avatares/avatar.png' %}" alt="" class="feedback-avatar">
+              <div class="feedback-content">
+                <p>
+                  Carla Souza – 34 anos
+
+                </p>
+                <p>
+                  "O acompanhamento dos instrutores faz toda diferença. Hoje treino com segurança e me sinto mais confiante no meu corpo."
+                </p>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+  </main>
+    
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="footer-container">
+      <div class="footer-brand">
+        <h2>AthleTech</h2>
+        <p>Transformando treino em tecnologia</p>
+      </div>
+
+      <div class="footer-links">
+        <h4>Links Rápidos</h4>
+        <ul>
+          <li><a href="#home">Início</a></li>
+          <li><a href="#planos">Planos</a></li>
+          <li><a href="#depoimentos">Depoimentos</a></li>
+          <li><a href="https://wa.me/5521968642276">Contato</a></li>
+        </ul>
+      </div>
+
+      <div class="footer-social">
+        <h4>Redes Sociais</h4>
+        <a href="https://wa.me/5521968642276" target="_blank"><i class="fa-brands fa-whatsapp"></i></a>
+        <a href="https://www.instagram.com/_castrox1" target="_blank"><i class="fa-brands fa-instagram"></i></a>
+      </div>
+    </div>
+
+    <div class="footer-bottom">
+      <p>&copy; 2025 CodeSquad. Todos os direitos reservados.</p>
+    </div>
+  </footer>
+
+  <script>
+    window.API_CONFIG = {
+      API_BASE_URL: "/api"
+    };
+  </script>
+  <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+
+  <!-- Partículas -->
+  <div id="tsparticles"></div>
+  <style>
+    #tsparticles {
+      position: fixed;
+      width: 100%;
+      height: 100%;
+      z-index: -1;
+      top: 0;
+      left: 0;
+    }
+  </style>
+  <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
+  <script>
+  tsParticles.load("tsparticles", {
+    fullScreen: { enable: false },
+    particles: {
+      number: { value: 60 },
+      color: { value: "#00bcd4" },
+      shape: { type: "circle" },
+      opacity: { value: 0.3 },
+      size: { value: 3 },
+      move: {
+        enable: true,
+        speed: 1.5,
+        direction: "none",
+        outModes: { default: "bounce" }
+      },
+      links: {
+        enable: true,
+        distance: 120,
+        color: "#00bcd4",
+        opacity: 0.2,
+        width: 1
+      }
+    },
+    interactivity: {
+      events: {
+        onHover: { enable: true, mode: "repulse" },
+        onClick: { enable: true, mode: "push" }
+      },
+      modes: {
+        repulse: { distance: 100 },
+        push: { quantity: 4 }
+      }
+    }
+  });
+  </script>
+
+  <style>
+    /* Responsividade para botões CTA */
+    @media (max-width: 768px) {
+      .cta-buttons {
+        flex-direction: column !important;
+        align-items: center !important;
+      }
+      
+      .cta-buttons .btn-default {
+        width: 100% !important;
+        max-width: 300px !important;
+        text-align: center !important;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .cta-buttons .btn-default {
+        padding: 12px 20px !important;
+        font-size: 1rem !important;
+      }
+    }
+  </style>
+
+</body>
+</html>

@@ -1,0 +1,101 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+  <head>
+    <meta charset="UTF-8" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="description" content="Login - AthleTech">
+    <link rel="icon" href="{% static 'images/favicon.ico' %}">
+    <title>Login AthleTech</title>
+    <link rel="stylesheet" href="{% static 'css/auth_frontend.css' %}" />
+    <script>
+      window.API_CONFIG = {
+        API_BASE_URL: "/api"
+      };
+    </script>
+  </head>
+  <body>
+    <header class="portal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+      <div class="brand" style="font-weight: 700; color: #e5e7eb;"><i class="fa-solid fa-dumbbell"></i> AthleTech • Login</div>
+      <nav class="header-actions" style="display: flex; align-items: center; gap: 12px;">
+        <a href="/" class="btn-small" style="background: rgb(0,31,84); color: #fff; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 1rem;text-align: center;">Início</a>
+        <div class="login-only">
+          <a href="{% url 'cadastro' %}" class="btn small" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Cadastre-se</a>
+        </div>
+        <div class="user-only" style="display: none;">
+          <div class="user-menu" style="display: flex; align-items: center; gap: 8px;">
+            <span id="user-name" class="user-name" style="color: #e5e7eb; font-weight: 500; font-size: 0.9rem; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">Carregando...</span>
+            <a href="#" id="logout-btn" class="btn small alt" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Sair</a>
+          </div>
+        </div>
+      </nav>
+    </header>
+    
+    <div class="container" style="margin-top: 80px;">
+      <div class="login-box">
+        <h2 id="form_title">Login</h2>
+        <form id="loginForm" method="POST" action="/api/auth/login/">     
+
+          <div class="input-box">
+            <input type="email" name="email" required />
+            <label>Email</label>
+          </div>
+          <div class="input-box">
+            <input type="password" name="password" required />
+            <label>Senha</label>
+          </div>
+          <div class="forgot-pass">
+            <a href="{% static 'html/recuperar.html' %}">Esqueceu a senha?</a>  
+          </div>
+            <button type="submit" class="btn">Entrar</button>
+          <div class="signup-link">
+            <a href="{% url 'cadastro' %}">Cadastre-se</a>
+          </div>
+        </form>
+      </div>
+    </div>
+    
+    <script src="{% static 'js/user-menu.js' %}"></script>
+  </body>
+</html>
+
+
+    <script>
+      document.getElementById('loginForm').addEventListener('submit', async function(event) {
+        event.preventDefault();
+
+        const form = event.target;
+        const formData = new FormData(form);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+          const response = await fetch(form.action, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(data)
+          });
+
+          const result = await response.json();
+
+          if (response.ok) {
+            // Login bem-sucedido
+            localStorage.setItem('access_token', result.access);
+            localStorage.setItem('refresh_token', result.refresh);
+            localStorage.setItem('user_data', JSON.stringify(result.user));
+            window.location.href = '/portal/'; // Redirecionar para o portal
+          } else {
+            // Erro no login
+            alert(result.message || 'Erro ao fazer login. Verifique suas credenciais.');
+            console.error('Erro de login:', result);
+          }
+        } catch (error) {
+          console.error('Erro na requisição:', error);
+          alert('Ocorreu um erro na comunicação com o servidor.');
+        }
+      });
+    </script>
+
+

@@ -1,0 +1,214 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Cadastro - AthleTech">
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-Evv84Mr4kqVGRNSgIGL/F/aIDqQb7xQ2vcrdIwxfjThSH8CSR7PBEakCr51Ck+w+/U6swU2Im1vVX0SVk9ABhg==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+  <link rel="stylesheet" href="{% static 'css/cadastro_frontend.css' %}">
+  <title>Criar conta</title>
+</head>
+<body style="background-image: url('{% static 'images/fundo.png' %}'); background-size: cover; background-position: center; background-repeat: no-repeat;">
+  <header class="portal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
+    <div class="brand" style="font-weight: 700; color: #e5e7eb;"><i class="fa-solid fa-dumbbell"></i> AthleTech • Cadastro</div>
+    <nav class="header-actions" style="display: flex; align-items: center; gap: 12px;">
+      <a href="/" class="btn small" style="background: rgb(0,31,84); color: #fff; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Início</a>
+      <div class="login-only">
+        <a href="/login/" class="btn small" style="background: rgb(0,31,84); color: #fff; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Login</a>
+      </div>
+      <div class="user-only" style="display: none;">
+        <div class="user-menu" style="display: flex; align-items: center; gap: 8px;">
+          <span id="user-name" class="user-name" style="color: #e5e7eb; font-weight: 500; font-size: 0.9rem; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">Carregando...</span>
+          <a href="#" id="logout-btn" class="btn small alt" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Sair</a>
+        </div>
+      </div>
+    </nav>
+  </header>
+  
+  <main id="form_container" style="margin-top: 80px;">
+    <div id="form_header" class="container">
+      <h1 id="form_title">Criar conta</h1>
+    </div>
+
+    <!-- Formulário corrigido -->
+    <form id="form" method="POST" action="{% url 'cadastro' %}">
+      {% csrf_token %}
+      <div id="input_container">
+        <div class="input-box">
+          <label for="name" class="form-label">Primeiro nome</label>
+          <div class="input-field">
+            <input type="text" name="name" id="first_name" class="form-control" placeholder="Fulano" required>
+            <i class="fa-regular fa-user"></i>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label for="last_name" class="form-label">Último nome</label>
+          <div class="input-field">
+            <input type="text" name="last_name" id="last_name" class="form-control" placeholder="De Tal" required>
+            <i class="fa-regular fa-user"></i>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label for="birth_date" class="form-label">Nascimento</label>
+          <div class="input-field">
+            <input type="date" name="birth_date" id="birth_date" class="form-control" required>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label for="email" class="form-label">E-mail</label>
+          <div class="input-field">
+            <input type="email" name="email" id="email" class="form-control" placeholder="exemplo@gmail.com" required>
+            <i class="fa-regular fa-envelope"></i>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label for="password" class="form-label">Senha</label>
+          <div class="input-field">
+            <input type="password" name="password" id="password" class="form-control" placeholder="*******" required>
+            <i class="fa-regular fa-eye-slash password-icon"></i>
+          </div>
+        </div>
+
+        <div class="input-box">
+          <label for="password_confirm" class="form-label">Confirmar senha</label>
+          <div class="input-field">
+            <input type="password" name="password_confirm" id="password_confirm" class="form-control" placeholder="*******" required>
+            <i class="fa-regular fa-eye-slash password-icon"></i>
+          </div>
+        </div>
+
+        <!-- Radios corrigidos -->
+        <div class="radio-container">
+          <label class="form-label">Gênero</label>
+          <div id="gender_inputs">
+            <label class="radio-wrapper-12" for="female">
+              <input type="radio" name="gender" id="female" value="female" required>
+              <span class="text">Feminino</span>
+            </label>
+
+            <label class="radio-wrapper-12" for="male">
+              <input type="radio" name="gender" id="male" value="male">
+              <span class="text">Masculino</span>
+            </label>
+
+            <label class="radio-wrapper-12" for="other">
+              <input type="radio" name="gender" id="other" value="other">
+              <span class="text">Outro</span>
+            </label>
+          </div>
+        </div>
+      </div>
+
+      {% comment %} <!-- Seletor de plano -->
+      <div class="card" style="margin: 16px 0; padding: 12px; background: #0b0b0bd1; border-radius: 10px;">
+        <h3 style="margin: 0 0 8px">Escolha seu plano</h3>
+        <div class="grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 10px;">
+          <div>
+            <label for="plano" class="form-label">Plano</label>
+            <select id="plano" name="plano" class="form-control" required></select>
+          </div>
+          <div>
+            <label class="form-label">Preço</label>
+            <input id="plano_preco" class="form-control" type="text" disabled value="R$ -" />
+          </div>
+          <div>
+            <label class="form-label">Duração</label>
+            <input id="plano_duracao" class="form-control" type="text" disabled value="- dias" />
+          </div>
+          <div>
+            <label class="form-label">Pagamento</label>
+            <div id="metodos_pagamento" style="display:flex; gap:8px; align-items:center;"></div>
+          </div>
+        </div>
+        <small id="regra_pagamento_hint" class="muted"></small>
+      </div> {% endcomment %}
+
+      <div class="form-options">
+        <div class="checkbox-wrapper-1">
+          <input type="checkbox" id="terms" class="substituted" required />
+          <label for="terms">
+            Aceito os <a href="#" target="_blank">termos de uso</a>
+          </label>
+        </div>
+      </div>
+      
+      <div class="button-container">
+        <button type="submit" class="btn-default">
+          <i class="fa-solid fa-check"></i>
+          Criar conta
+        </button>
+      </div>
+    </form>
+  </main>
+  <script>
+    window.API_CONFIG = { API_BASE_URL: '/api' };
+  </script>
+  <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/config.js' %}"></script>
+  <script src="{% static 'js/script.js' %}"></script>
+  <script>
+    // Carregar planos do backend e aplicar regras de pagamento
+    document.addEventListener('DOMContentLoaded', async function() {
+      const selectPlano = document.getElementById('plano');
+      const precoEl = document.getElementById('plano_preco');
+      const duracaoEl = document.getElementById('plano_duracao');
+      const metodosEl = document.getElementById('metodos_pagamento');
+      const hintEl = document.getElementById('regra_pagamento_hint');
+
+      async function loadPlanos() {
+        try {
+          const res = await fetch('/api/planos/');
+          const data = await res.json();
+          const planos = Array.isArray(data) ? data : data.results || [];
+          selectPlano.innerHTML = '';
+          planos.forEach(p => {
+            const opt = document.createElement('option');
+            opt.value = p.id;
+            opt.textContent = `${p.nome}`;
+            opt.dataset.preco = p.preco;
+            opt.dataset.duracao = p.duracao_dias;
+            selectPlano.appendChild(opt);
+          });
+          updatePlanoInfo();
+        } catch (e) {
+          console.error('Falha ao carregar planos', e);
+        }
+      }
+
+      function updatePlanoInfo() {
+        const opt = selectPlano.options[selectPlano.selectedIndex];
+        if (!opt) return;
+        const preco = parseFloat(opt.dataset.preco || '0');
+        const dias = parseInt(opt.dataset.duracao || '0');
+        precoEl.value = preco ? `R$ ${preco.toFixed(2)}` : 'R$ -';
+        duracaoEl.value = `${dias} dias`;
+
+        // aplicar regras de pagamento
+        const tier = window.getPlanTier(dias);
+        const methods = window.SALES_CONFIG.paymentRules[tier] || ['cartao'];
+        metodosEl.innerHTML = '';
+        methods.forEach(m => {
+          const id = `pg_${m}`;
+          const label = window.SALES_CONFIG.labels[m] || m;
+          const wrapper = document.createElement('label');
+          wrapper.style.display = 'inline-flex';
+          wrapper.style.gap = '6px';
+          wrapper.style.alignItems = 'center';
+          wrapper.innerHTML = `<input type="radio" name="payment_method" value="${m}" required> ${label}`;
+          metodosEl.appendChild(wrapper);
+        });
+        hintEl.textContent = tier === 'mensal' ? 'Mensal: aceita Pix e Cartão.' : (tier === 'trimestral' ? 'Trimestral: somente Cartão.' : 'Anual: somente Cartão.');
+      }
+
+      selectPlano.addEventListener('change', updatePlanoInfo);
+      loadPlanos();
+    });
+  </script>
+</body>
+</html>
