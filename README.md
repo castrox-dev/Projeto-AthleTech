@@ -31,7 +31,7 @@ O protótipo inclui as seguintes funcionalidades:
 
 Para executar o projeto, siga os passos detalhados no `README.md` específico do backend:
 
-[Link para o README do Backend](Projeto_academia/academia_backend/README.md)
+[Link para o README do Backend](academia_backend/README.md)
 
 ## Autores
 
