@@ -35,8 +35,8 @@ Para executar o projeto, siga os passos detalhados no `README.md` específico do
 
 ## Autores
 
-- [https://github.com/c3l1nn23/]
-- [https://github.com/raphafz/]
+- [Marcelo Castro](https://github.com/c3l1nn23/)
+- [Raphael Ferraz](https://github.com/raphafz/)
 
 ---
 
