@@ -35,8 +35,8 @@ Para executar o projeto, siga os passos detalhados no `README.md` específico do
 
 ## Autores
 
-- [Seu Nome Aqui 1]
-- [Seu Nome Aqui 2]
+- [https://github.com/c3l1nn23/]
+- [https://github.com/raphafz/]
 
 ---
 
