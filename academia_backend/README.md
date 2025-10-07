@@ -71,6 +71,10 @@ DB_SSL_REQUIRE=True
 ```bash
 python manage.py migrate
 ```
+### Observação : caso não rode o css, execute o comando abaixo:
+```bash
+python manage.py collectstatic
+```
 
 ### 6. Carregar dados iniciais
 ```bash
