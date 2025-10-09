@@ -35,7 +35,7 @@ Para executar o projeto, siga os passos detalhados no `README.md` específico do
 
 ## Autores
 
-- [Marcelo Castro](https://github.com/c3l1nn23/)
+- [Marcelo Castro](https://github.com/castrox-dev/)
 - [Raphael Ferraz](https://github.com/raphafz/)
 
 ---
