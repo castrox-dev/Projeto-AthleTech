@@ -26,9 +26,8 @@
   <div class="portal-layout">
     <aside class="sidebar">
       <a href="#perfil" class="item active"><i class="fa-regular fa-user"></i> Perfil</a>
-      <a href="#treinos" class="item"><i class="fa-solid fa-dumbbell"></i> Treinos</a>
+      <a href="/treinos/" class="item"><i class="fa-solid fa-dumbbell"></i> Treinos</a>
       <a href="#avaliacoes" class="item"><i class="fa-regular fa-clipboard"></i> Avaliações</a>
-      <a href="#exercicios" class="item"><i class="fa-solid fa-list-check"></i> Exercícios</a>
     </aside>
 
     <main class="content">
@@ -37,119 +36,107 @@
           <h2>Informações Pessoais</h2>
           <button id="btn-editar" class="btn small">Editar</button>
         </div>
-        <div class="grid-2">
+        
+        <div class="grid-2" style="margin-bottom: 2rem;">
           <div class="info">
-            <h3>Dados básicos</h3>
+            <h3><i class="fa-solid fa-user"></i> Dados Básicos</h3>
             <ul class="kv">
-              <li><span>Nome</span><strong id="aluno-nome">Aluno Exemplo</strong></li>
+              <li><span>Nome Completo</span><strong id="aluno-nome">Aluno Exemplo</strong></li>
               <li><span>Email</span><strong id="aluno-email">aluno@example.com</strong></li>
               <li><span>Telefone</span><strong id="aluno-telefone">(00) 00000-0000</strong></li>
+              <li><span>Data de Nascimento</span><strong id="aluno-nascimento">--</strong></li>
+              <li><span>Gênero</span><strong id="aluno-genero">--</strong></li>
             </ul>
           </div>
           <div class="info">
-            <h3>Medidas</h3>
+            <h3><i class="fa-solid fa-info-circle"></i> Informações da Conta</h3>
             <ul class="kv">
-              <li><span>Peso</span><strong id="aluno-peso">80 kg</strong></li>
-              <li><span>Altura</span><strong id="aluno-altura">1,78 m</strong></li>
-              <li><span>IMC</span><strong id="aluno-imc">25,2</strong></li>
+              <li><span>Status da Matrícula</span><strong id="aluno-matricula">--</strong></li>
+              <li><span>Membro Ativo</span><strong id="aluno-membro">--</strong></li>
+              <li><span>Data de Cadastro</span><strong id="aluno-cadastro">--</strong></li>
+              <li><span>Última Atualização</span><strong id="aluno-atualizacao">--</strong></li>
             </ul>
           </div>
         </div>
 
         <form id="form-perfil" class="edit-form hidden">
+          <h3 style="margin-bottom: 1rem;">Editar Informações</h3>
           <div class="grid-3">
             <div class="field">
-              <label for="f-nome">Nome</label>
-              <input id="f-nome" type="text" value="Aluno Exemplo">
+              <label for="f-nome">Nome Completo</label>
+              <input id="f-nome" type="text" placeholder="Seu nome completo">
             </div>
             <div class="field">
               <label for="f-email">Email</label>
-              <input id="f-email" type="email" value="aluno@example.com">
+              <input id="f-email" type="email" placeholder="seu@email.com">
             </div>
             <div class="field">
               <label for="f-telefone">Telefone</label>
-              <input id="f-telefone" type="text" value="(00) 00000-0000">
+              <input id="f-telefone" type="text" placeholder="(00) 00000-0000">
             </div>
             <div class="field">
-              <label for="f-peso">Peso (kg)</label>
-              <input id="f-peso" type="number" step="0.1" value="80">
+              <label for="f-nascimento">Data de Nascimento</label>
+              <input id="f-nascimento" type="date">
             </div>
             <div class="field">
-              <label for="f-altura">Altura (m)</label>
-              <input id="f-altura" type="number" step="0.01" value="1.78">
+              <label for="f-genero">Gênero</label>
+              <select id="f-genero">
+                <option value="">Selecione</option>
+                <option value="male">Masculino</option>
+                <option value="female">Feminino</option>
+                <option value="other">Outro</option>
+              </select>
             </div>
             <div class="field">
               <label>&nbsp;</label>
-              <button type="submit" class="btn">Salvar</button>
+              <button type="submit" class="btn">Salvar Alterações</button>
             </div>
           </div>
-          <p class="muted">Somente interface: os dados não são persistidos ainda.</p>
+          <p class="muted" style="margin-top: 1rem;">
+            <i class="fa-solid fa-info-circle"></i> 
+            As medidas corporais são atualizadas pelo professor através das avaliações físicas.
+          </p>
         </form>
       </section>
 
-      <section id="treinos" class="card">
-        <h2>Treinos</h2>
-        <div class="list">
-          <article class="row">
-            <div>
-              <h4>Treino A</h4>
-              <p>Peito • Tríceps • Abdômen</p>
-            </div>
-            <span class="tag">2x por semana</span>
-          </article>
-          <article class="row">
-            <div>
-              <h4>Treino B</h4>
-              <p>Costas • Bíceps</p>
-            </div>
-            <span class="tag">2x por semana</span>
-          </article>
-          <article class="row">
-            <div>
-              <h4>Treino C</h4>
-              <p>Pernas • Ombros</p>
-            </div>
-            <span class="tag">1x por semana</span>
-          </article>
-        </div>
-      </section>
 
       <section id="avaliacoes" class="card">
         <div class="card-head">
-          <h2>Avaliações</h2>
+          <h2>Avaliações Físicas</h2>
           <span class="muted">Somente treinador pode adicionar</span>
         </div>
-        <table class="table" id="tabela-avaliacoes">
-          <thead>
-            <tr><th>Data</th><th>Peso</th><th>Gordura %</th><th>Muscular %</th><th>Observações</th></tr>
-          </thead>
-          <tbody>
-            <tr><td>12/01/2025</td><td>80 kg</td><td>18%</td><td>39%</td><td>Objetivo: definição</td></tr>
-            <tr><td>12/02/2025</td><td>78,5 kg</td><td>17%</td><td>40%</td><td>Evolução positiva</td></tr>
-          </tbody>
-        </table>
+        
+        <div class="grid-2" style="margin-bottom: 2rem;">
+          <div class="info">
+            <h3><i class="fa-solid fa-ruler-combined"></i> Medidas Atuais</h3>
+            <ul class="kv">
+              <li><span>Peso</span><strong id="aluno-peso">--</strong></li>
+              <li><span>Altura</span><strong id="aluno-altura">--</strong></li>
+              <li><span>IMC</span><strong id="aluno-imc">--</strong></li>
+              <li><span>% Gordura</span><strong id="aluno-gordura">--</strong></li>
+              <li><span>Massa Muscular</span><strong id="aluno-muscular">--</strong></li>
+            </ul>
+            <p class="muted" style="margin-top: 1rem; font-size: 0.875rem;">
+              <i class="fa-solid fa-info-circle"></i> 
+              Medidas atualizadas através das avaliações físicas realizadas pelo professor.
+            </p>
+          </div>
+          <div class="info">
+            <h3><i class="fa-solid fa-history"></i> Histórico de Avaliações</h3>
+            <div style="overflow-x: auto;">
+              <table class="table" id="tabela-avaliacoes">
+                <thead>
+                  <tr><th>Data</th><th>Peso</th><th>Gordura %</th><th>Muscular %</th><th>Observações</th></tr>
+                </thead>
+                <tbody>
+                  <tr><td colspan="5" class="muted" style="text-align: center;">Carregando avaliações...</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
       </section>
 
-      <section id="exercicios" class="card">
-        <div class="card-head">
-          <h2>Exercícios</h2>
-          <span class="muted">Somente treinador pode adicionar</span>
-        </div>
-        <div class="grid-3" id="lista-exercicios">
-          <div class="exercise">
-            <h4>Supino reto</h4>
-            <p>4x8-10 • Carga moderada</p>
-          </div>
-          <div class="exercise">
-            <h4>Remada curvada</h4>
-            <p>4x8-10 • Técnica controlada</p>
-          </div>
-          <div class="exercise">
-            <h4>Agachamento</h4>
-            <p>5x5 • Progressão semanal</p>
-          </div>
-        </div>
-      </section>
     </main>
   </div>
 

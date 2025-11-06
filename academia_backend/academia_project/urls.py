@@ -16,6 +16,7 @@ urlpatterns = [
     path('', TemplateView.as_view(template_name='html/home.html'), name='home'),
     path('login/', TemplateView.as_view(template_name='html/login.html'), name='login'),
     path('portal/', TemplateView.as_view(template_name='html/portal_frontend.html'), name='portal'),
+    path('treinos/', TemplateView.as_view(template_name='html/treinos_frontend.html'), name='treinos'),
     path('planos/', TemplateView.as_view(template_name='html/planos_frontend.html'), name='planos'),
     path('cadastro/', TemplateView.as_view(template_name='html/cadastro_frontend.html'), name='cadastro'),
     path('checkout/', TemplateView.as_view(template_name='html/checkout_frontend.html'), name='checkout'),
@@ -25,6 +26,7 @@ urlpatterns = [
 
 # Servir arquivos estáticos e media em desenvolvimento
 if settings.DEBUG:
-    urlpatterns += static(settings.STATIC_URL, document_root=settings.STATIC_ROOT)
+    from django.contrib.staticfiles.urls import staticfiles_urlpatterns
+    urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
 

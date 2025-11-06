@@ -1,0 +1,146 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Meus Treinos - AthleTech</title>
+  <meta name="description" content="Visualize seus treinos e exercícios cadastrados pelo professor.">
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="{% static 'css/portal.css' %}">
+  <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <style>
+    .treinos-page {
+      max-width: 1200px;
+      margin: 0 auto;
+      padding: 2rem 1rem;
+    }
+    .treino-card {
+      background: white;
+      border-radius: 12px;
+      padding: 2rem;
+      margin-bottom: 2rem;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      border: 1px solid #e0e0e0;
+    }
+    .treino-header {
+      border-bottom: 2px solid #f0f0f0;
+      padding-bottom: 1rem;
+      margin-bottom: 1.5rem;
+    }
+    .treino-header h2 {
+      margin: 0 0 0.5rem 0;
+      color: #333;
+      font-size: 1.5rem;
+    }
+    .treino-header .muted {
+      color: #666;
+      font-size: 0.9rem;
+    }
+    .exercicios-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 1rem;
+    }
+    .exercise-card {
+      background: #f9f9f9;
+      border-radius: 8px;
+      padding: 1.25rem;
+      border-left: 4px solid #4CAF50;
+    }
+    .exercise-card h4 {
+      margin: 0 0 0.75rem 0;
+      color: #333;
+      font-size: 1.1rem;
+    }
+    .exercise-info {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.75rem;
+      font-size: 0.9rem;
+      color: #666;
+      margin-bottom: 0.5rem;
+    }
+    .exercise-info span {
+      background: #e8e8e8;
+      padding: 0.25rem 0.75rem;
+      border-radius: 4px;
+    }
+    .exercise-observacoes {
+      margin-top: 0.75rem;
+      padding-top: 0.75rem;
+      border-top: 1px solid #e0e0e0;
+      font-size: 0.875rem;
+      color: #666;
+      font-style: italic;
+    }
+    .empty-state {
+      text-align: center;
+      padding: 4rem 2rem;
+      color: #666;
+    }
+    .empty-state i {
+      font-size: 4rem;
+      color: #ccc;
+      margin-bottom: 1rem;
+    }
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 0.5rem;
+      color: #4CAF50;
+      text-decoration: none;
+      margin-bottom: 2rem;
+      font-weight: 500;
+    }
+    .back-link:hover {
+      text-decoration: underline;
+    }
+    @media (max-width: 768px) {
+      .exercicios-grid {
+        grid-template-columns: 1fr;
+      }
+      .treino-card {
+        padding: 1.5rem;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="portal-header">
+    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Meus Treinos</div>
+    <nav class="header-actions">
+      <a href="/portal/" class="btn small">Portal</a>
+      <a href="/" class="btn small">Início</a>
+      <div class="user-menu">
+        <span id="user-name" class="user-name">Carregando...</span>
+        <a href="/login/" class="btn small alt" id="logout-btn">Sair</a>
+      </div>
+    </nav>
+  </header>
+
+  <div class="treinos-page">
+    <a href="/portal/" class="back-link">
+      <i class="fa-solid fa-arrow-left"></i>
+      Voltar ao Portal
+    </a>
+
+    <div id="treinos-container">
+      <div class="empty-state" id="loading-state">
+        <i class="fa-solid fa-spinner fa-spin"></i>
+        <p>Carregando seus treinos...</p>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    window.API_CONFIG = {
+      API_BASE_URL: "/api"
+    };
+  </script>
+  <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/treinos.js' %}"></script>
+</body>
+</html>
+

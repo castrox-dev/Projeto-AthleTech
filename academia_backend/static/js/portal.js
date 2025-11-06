@@ -98,33 +98,112 @@ document.addEventListener('DOMContentLoaded', async function() {
       return;
     }
 
-    // Fill treinos
-    if (Array.isArray(data.treinos_recentes)) {
-      const treinosSection = document.querySelector('#treinos .list');
-      if (treinosSection) treinosSection.innerHTML = '';
-      data.treinos_recentes.forEach(t => {
-        const article = document.createElement('article');
-        article.className = 'row';
-        article.innerHTML = `<div><h4>${t.nome}</h4><p>${t.descricao || ''}</p></div><span class="tag">Ativo</span>`;
-        treinosSection && treinosSection.appendChild(article);
-      });
+    // Preencher informações pessoais mais robustas
+    if (data.usuario) {
+      // Data de nascimento
+      if (data.usuario.birth_date) {
+        const birthDate = new Date(data.usuario.birth_date);
+        const formattedDate = birthDate.toLocaleDateString('pt-BR');
+        document.getElementById('aluno-nascimento').textContent = formattedDate;
+      }
+      
+      // Gênero
+      const generoMap = {
+        'male': 'Masculino',
+        'female': 'Feminino',
+        'other': 'Outro'
+      };
+      if (data.usuario.gender) {
+        document.getElementById('aluno-genero').textContent = generoMap[data.usuario.gender] || data.usuario.gender;
+      }
+      
+      // Status da matrícula
+      if (data.matricula_ativa) {
+        document.getElementById('aluno-matricula').innerHTML = '<span style="color: #4CAF50;">Ativa</span>';
+        if (data.matricula_ativa.data_fim) {
+          const dataFim = new Date(data.matricula_ativa.data_fim);
+          const formattedFim = dataFim.toLocaleDateString('pt-BR');
+          document.getElementById('aluno-matricula').innerHTML += `<br><small class="muted">Até ${formattedFim}</small>`;
+        }
+      } else {
+        document.getElementById('aluno-matricula').innerHTML = '<span style="color: #f44336;">Inativa</span>';
+      }
+      
+      // Membro ativo
+      if (data.usuario.is_active_member) {
+        document.getElementById('aluno-membro').innerHTML = '<span style="color: #4CAF50;">Sim</span>';
+      } else {
+        document.getElementById('aluno-membro').innerHTML = '<span style="color: #ff9800;">Não</span>';
+      }
+      
+      // Data de cadastro
+      if (data.usuario.created_at) {
+        const createdDate = new Date(data.usuario.created_at);
+        document.getElementById('aluno-cadastro').textContent = createdDate.toLocaleDateString('pt-BR');
+      }
+      
+      // Última atualização
+      if (data.usuario.updated_at) {
+        const updatedDate = new Date(data.usuario.updated_at);
+        document.getElementById('aluno-atualizacao').textContent = updatedDate.toLocaleDateString('pt-BR');
+      }
+      
+      // Preencher formulário de edição
+      const fNascimento = document.getElementById('f-nascimento');
+      const fGenero = document.getElementById('f-genero');
+      if (fNascimento && data.usuario.birth_date) {
+        fNascimento.value = data.usuario.birth_date.split('T')[0];
+      }
+      if (fGenero && data.usuario.gender) {
+        fGenero.value = data.usuario.gender;
+      }
+    }
+    
+    // Preencher medidas da última avaliação
+    if (data.ultima_avaliacao) {
+      if (data.ultima_avaliacao.percentual_gordura) {
+        document.getElementById('aluno-gordura').textContent = `${data.ultima_avaliacao.percentual_gordura}%`;
+      }
+      if (data.ultima_avaliacao.massa_muscular) {
+        document.getElementById('aluno-muscular').textContent = `${data.ultima_avaliacao.massa_muscular} kg`;
+      }
     }
 
-    // Fill exercícios: exemplo carregando lista geral do usuário
+    // Carregar histórico de avaliações
     try {
-      const exResp = await authenticatedFetch(`${API_BASE_URL}/exercicios/`);
-      if (exResp && exResp.ok) {
-        const exData = await exResp.json();
-        const grid = document.getElementById('lista-exercicios');
-        if (grid) grid.innerHTML = '';
-        exData.results?.forEach(ex => {
-          const div = document.createElement('div');
-          div.className = 'exercise';
-          div.innerHTML = `<h4>${ex.nome}</h4><p>${ex.categoria} • ${ex.nivel}</p>`;
-          grid && grid.appendChild(div);
-        });
+      const avaliacoesResp = await authenticatedFetch(`${API_BASE_URL}/avaliacoes/`);
+      if (avaliacoesResp && avaliacoesResp.ok) {
+        const avaliacoesData = await avaliacoesResp.json();
+        const tabelaBody = document.querySelector('#tabela-avaliacoes tbody');
+        
+        if (tabelaBody) {
+          tabelaBody.innerHTML = '';
+          
+          if (!avaliacoesData.results || avaliacoesData.results.length === 0) {
+            tabelaBody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align: center;">Nenhuma avaliação registrada ainda.</td></tr>';
+          } else {
+            avaliacoesData.results.forEach(av => {
+              const dataAval = new Date(av.data_avaliacao);
+              const row = document.createElement('tr');
+              row.innerHTML = `
+                <td>${dataAval.toLocaleDateString('pt-BR')}</td>
+                <td>${av.peso ? av.peso + ' kg' : '--'}</td>
+                <td>${av.percentual_gordura ? av.percentual_gordura + '%' : '--'}</td>
+                <td>${av.massa_muscular ? av.massa_muscular + ' kg' : '--'}</td>
+                <td>${av.observacoes || '--'}</td>
+              `;
+              tabelaBody.appendChild(row);
+            });
+          }
+        }
       }
-    } catch (e) { /* silencioso */ }
+    } catch (e) {
+      console.error('Erro ao carregar avaliações:', e);
+      const tabelaBody = document.querySelector('#tabela-avaliacoes tbody');
+      if (tabelaBody) {
+        tabelaBody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align: center;">Erro ao carregar avaliações.</td></tr>';
+      }
+    }
 
   } catch (err) {
     console.error(err);
@@ -136,11 +215,15 @@ document.addEventListener('DOMContentLoaded', async function() {
   if (formPerfil) {
     formPerfil.addEventListener('submit', async function(e) {
       e.preventDefault();
+      const nomeCompleto = document.getElementById('f-nome').value.trim();
+      const nomeParts = nomeCompleto.split(' ');
       const payload = {
-        first_name: document.getElementById('f-nome').value.split(' ')[0] || undefined,
-        last_name: (function(){ const sp=document.getElementById('f-nome').value.split(' '); sp.shift(); return sp.join(' '); })() || undefined,
-        email: document.getElementById('f-email').value,
-        phone: document.getElementById('f-telefone').value
+        first_name: nomeParts[0] || undefined,
+        last_name: nomeParts.slice(1).join(' ') || undefined,
+        email: document.getElementById('f-email').value.trim(),
+        phone: document.getElementById('f-telefone').value.trim(),
+        birth_date: document.getElementById('f-nascimento').value || undefined,
+        gender: document.getElementById('f-genero').value || undefined
       };
       try {
         const res = await authenticatedFetch(`${API_BASE_URL}/auth/user/`, {
@@ -148,11 +231,16 @@ document.addEventListener('DOMContentLoaded', async function() {
           body: JSON.stringify(payload)
         });
         if (res && res.ok) {
+          alert('Perfil atualizado com sucesso!');
           location.reload();
         } else {
-          alert('Erro ao salvar perfil');
+          const errorData = await res.json();
+          alert('Erro ao salvar perfil: ' + (errorData.detail || 'Erro desconhecido'));
         }
-      } catch (_) { alert('Erro de conexão'); }
+      } catch (err) {
+        console.error(err);
+        alert('Erro de conexão. Tente novamente.');
+      }
     });
   }
 

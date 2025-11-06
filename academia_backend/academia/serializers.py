@@ -136,6 +136,13 @@ class TreinoSerializer(serializers.ModelSerializer):
             'exercicios_detalhes', 'data_criacao', 'ativo'
         ]
         read_only_fields = ['data_criacao']
+    
+    def to_representation(self, instance):
+        """Garantir que exercicios_detalhes seja sempre uma lista"""
+        representation = super().to_representation(instance)
+        if 'exercicios_detalhes' not in representation or representation['exercicios_detalhes'] is None:
+            representation['exercicios_detalhes'] = []
+        return representation
 
 class AvaliacaoSerializer(serializers.ModelSerializer):
     """Serializer para o modelo Avaliacao"""

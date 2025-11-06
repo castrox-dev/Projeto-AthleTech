@@ -232,7 +232,13 @@ class TreinoListView(ListAPIView):
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return Treino.objects.filter(usuario=self.request.user, ativo=True)
+        return Treino.objects.filter(
+            usuario=self.request.user, 
+            ativo=True
+        ).prefetch_related(
+            'treinoexercicio_set',
+            'treinoexercicio_set__exercicio'
+        ).order_by('-data_criacao')
 
 class TreinoDetailView(RetrieveAPIView):
     """View para detalhes de um treino"""
