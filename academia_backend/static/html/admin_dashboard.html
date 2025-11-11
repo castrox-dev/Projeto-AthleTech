@@ -1,0 +1,216 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Dashboard do Administrador • AthleTech</title>
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-B/Lk5XlU5IgxkpDqKqCFoYD9tiq6qVgqU5gUjJw9MBQNzEiASQL4W5nz7GVaCi6ctX+pMx2k49+bUNK70CklxQ==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="{% static 'css/admin.css' %}">
+</head>
+<body>
+  <div class="layout">
+    <aside class="sidebar">
+      <div class="brand">
+        <i class="fa-solid fa-dumbbell"></i>
+        <span>ATHLETECH</span>
+      </div>
+      <nav class="nav">
+        <a href="#visao-geral" class="active"><i class="fa-solid fa-chart-pie"></i>Visão Geral</a>
+        <a href="#alunos"><i class="fa-solid fa-users"></i>Alunos</a>
+        <a href="#planos"><i class="fa-solid fa-clipboard-list"></i>Planos</a>
+        <a href="#matriculas"><i class="fa-solid fa-ticket"></i>Matrículas</a>
+        <a href="#financeiro"><i class="fa-solid fa-coins"></i>Financeiro</a>
+        <a href="#professores"><i class="fa-solid fa-chalkboard-teacher"></i>Professores</a>
+      </nav>
+      <a class="logout" href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
+    </aside>
+
+    <main class="content">
+      <header class="page-header" id="visao-geral">
+        <div>
+          <h1>Central de Administração</h1>
+          <p>Gerencie toda a operação da AthleTech em um único lugar.</p>
+        </div>
+        <div class="header-actions">
+          <a class="btn outline" href="#"><i class="fa-solid fa-file-export"></i>Relatórios</a>
+          <a class="btn primary" href="#"><i class="fa-solid fa-plus"></i>Novo Plano</a>
+        </div>
+      </header>
+
+      <section class="overview">
+        <article class="card">
+          <h3>Alunos ativos</h3>
+          <strong>482</strong>
+          <small>+18% nos últimos 30 dias</small>
+        </article>
+        <article class="card">
+          <h3>Receita mensal</h3>
+          <strong>R$ 74.980</strong>
+          <small class="status success"><i class="fa-solid fa-arrow-trend-up"></i> +6,4%</small>
+        </article>
+        <article class="card">
+          <h3>Matrículas novas</h3>
+          <strong>63</strong>
+          <small class="status warning"><i class="fa-solid fa-rotate"></i> 12 renovações pendentes</small>
+        </article>
+        <article class="card">
+          <h3>Treinos ativos</h3>
+          <strong>128</strong>
+          <small>Distribuídos por 9 professores</small>
+        </article>
+      </section>
+
+      <section class="grid two" id="alunos">
+        <article class="card">
+          <h2 class="section-title">Alunos com pagamento pendente</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Aluno</th>
+                <th>Plano</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Renata Alves</td>
+                <td>Premium</td>
+                <td><span class="status warning"><i class="fa-solid fa-clock"></i> 3 dias</span></td>
+              </tr>
+              <tr>
+                <td>João Mendes</td>
+                <td>Básico</td>
+                <td><span class="status danger"><i class="fa-solid fa-triangle-exclamation"></i> 7 dias</span></td>
+              </tr>
+              <tr>
+                <td>Lucas Lima</td>
+                <td>Elite</td>
+                <td><span class="status warning"><i class="fa-solid fa-clock"></i> 1 dia</span></td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+
+        <article class="card" id="planos">
+          <h2 class="section-title">Desempenho de planos</h2>
+          <div class="list">
+            <div class="list-item">
+              <div class="info">
+                <strong>Plano Premium</strong>
+                <span>321 assinaturas ativas</span>
+              </div>
+              <span class="tag">54%</span>
+            </div>
+            <div class="list-item">
+              <div class="info">
+                <strong>Plano Elite</strong>
+                <span>102 assinaturas ativas</span>
+              </div>
+              <span class="tag">25%</span>
+            </div>
+            <div class="list-item">
+              <div class="info">
+                <strong>Plano Básico</strong>
+                <span>59 assinaturas ativas</span>
+              </div>
+              <span class="tag">21%</span>
+            </div>
+          </div>
+        </article>
+      </section>
+
+      <section class="grid two" id="matriculas">
+        <article class="card">
+          <h2 class="section-title">Matrículas recentes</h2>
+          <ul class="list">
+            <li class="list-item">
+              <div class="info">
+                <strong>Gabriel Souza</strong>
+                <span>Plano Elite • professor Marcos Andrade</span>
+              </div>
+              <span class="status success"><i class="fa-solid fa-circle-check"></i> Confirmado</span>
+            </li>
+            <li class="list-item">
+              <div class="info">
+                <strong>Bianca Ramos</strong>
+                <span>Plano Premium • professoras Ana e Carla</span>
+              </div>
+              <span class="status warning"><i class="fa-solid fa-clock"></i> Aguardando boleto</span>
+            </li>
+            <li class="list-item">
+              <div class="info">
+                <strong>Felipe Duarte</strong>
+                <span>Plano Básico • autoatendimento</span>
+              </div>
+              <span class="status success"><i class="fa-solid fa-circle-check"></i> Confirmado</span>
+            </li>
+          </ul>
+        </article>
+
+        <article class="card" id="financeiro">
+          <h2 class="section-title">Resumo financeiro</h2>
+          <table class="table">
+            <thead>
+              <tr>
+                <th>Indicador</th>
+                <th>Valor</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td>Mensalidade média</td>
+                <td>R$ 155,20</td>
+              </tr>
+              <tr>
+                <td>Inadimplência</td>
+                <td><span class="status danger"><i class="fa-solid fa-arrow-trend-up"></i> 3,2%</span></td>
+              </tr>
+              <tr>
+                <td>Receita anual proj.</td>
+                <td>R$ 932.450</td>
+              </tr>
+            </tbody>
+          </table>
+        </article>
+      </section>
+
+      <section class="card" id="professores">
+        <h2 class="section-title">Equipe de professores</h2>
+        <table class="table">
+          <thead>
+            <tr>
+              <th>Professor</th>
+              <th>Especialidade</th>
+              <th>Alunos</th>
+              <th>Treinos ativos</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Ana Costa</td>
+              <td>Hipertrofia</td>
+              <td>72</td>
+              <td>31</td>
+            </tr>
+            <tr>
+              <td>Marcos Andrade</td>
+              <td>Performance</td>
+              <td>65</td>
+              <td>28</td>
+            </tr>
+            <tr>
+              <td>Carla Nunes</td>
+              <td>Reabilitação</td>
+              <td>44</td>
+              <td>19</td>
+            </tr>
+          </tbody>
+        </table>
+      </section>
+    </main>
+  </div>
+</body>
+</html>
+

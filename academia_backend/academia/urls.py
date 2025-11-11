@@ -12,6 +12,7 @@ router = DefaultRouter()
 router.register(r'planos', views.PlanoViewSet)
 router.register(r'usuarios', views.UsuarioViewSet)
 router.register(r'matriculas', views.MatriculaViewSet, basename='matricula')
+router.register(r'treinos/gerenciar', views.TreinoManageViewSet, basename='treino-gerenciar')
 
 urlpatterns = [
     # URLs do router
@@ -37,7 +38,6 @@ urlpatterns = [
     path('exercicios/', views.ExercicioListView.as_view(), name='exercicios'),
     path('avaliacoes/', views.AvaliacaoListView.as_view(), name='avaliacoes'),
 
-    # Pagamentos PIX
     path('payments/pix/initiate/', views.PixInitiateView.as_view(), name='pix_initiate'),
     path('payments/pix/status/<uuid:pedido_id>/', views.PixStatusView.as_view(), name='pix_status'),
     path('payments/pix/confirm/<uuid:pedido_id>/', views.PixConfirmView.as_view(), name='pix_confirm'),

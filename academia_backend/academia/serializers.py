@@ -10,13 +10,14 @@ class UsuarioSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'email', 'first_name', 'last_name',
-            'phone', 'birth_date', 'gender', 'is_active_member',
+            'phone', 'birth_date', 'gender', 'role', 'is_active_member',
             'created_at', 'password', 'password_confirm'
         ]
         extra_kwargs = {
             'password': {'write_only': True},
             'created_at': {'read_only': True},
             'is_active_member': {'read_only': True},
+            'role': {'read_only': True},
         }
 
     def validate_email(self, value):
@@ -44,10 +45,10 @@ class UsuarioProfileSerializer(serializers.ModelSerializer):
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
-            'phone', 'birth_date', 'gender', 'is_active_member',
+            'phone', 'birth_date', 'gender', 'role', 'is_active_member',
             'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'username', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'username', 'created_at', 'updated_at', 'role']
 
 class LoginSerializer(serializers.Serializer):
     """Serializer para login de usuários via API"""

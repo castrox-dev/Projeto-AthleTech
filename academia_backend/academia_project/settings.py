@@ -189,3 +189,7 @@ PIX_KEY = config('PIX_KEY', default='')
 STACK_PROJECT_ID = config('STACK_PROJECT_ID', default='')
 STACK_PUBLISHABLE_CLIENT_KEY = config('STACK_PUBLISHABLE_CLIENT_KEY', default='')
 STACK_SECRET_SERVER_KEY = config('STACK_SECRET_SERVER_KEY', default='')
+
+# Login redirects
+LOGIN_URL = '/login/'
+LOGIN_REDIRECT_URL = '/portal/'

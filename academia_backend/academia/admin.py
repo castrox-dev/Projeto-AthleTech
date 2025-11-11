@@ -6,14 +6,17 @@ from .models import Usuario, Plano, Matricula, Exercicio, Treino, TreinoExercici
 class UsuarioAdmin(UserAdmin):
     """Admin para o modelo Usuario customizado"""
     
-    list_display = ['username', 'email', 'first_name', 'last_name', 'is_active_member', 'is_staff']
-    list_filter = ['is_active_member', 'is_staff', 'is_active', 'gender', 'created_at']
+    list_display = ['username', 'email', 'first_name', 'last_name', 'role', 'is_active_member', 'is_staff']
+    list_filter = ['role', 'is_active_member', 'is_staff', 'is_active', 'gender', 'created_at']
     search_fields = ['username', 'email', 'first_name', 'last_name', 'phone']
     ordering = ['-created_at']
     
     fieldsets = UserAdmin.fieldsets + (
-        ('Informações Adicionais', {
-            'fields': ('phone', 'birth_date', 'gender', 'is_active_member')
+        ('Permissões da Academia', {
+            'fields': ('role', 'is_active_member')
+        }),
+        ('Contato e Perfil', {
+            'fields': ('phone', 'birth_date', 'gender')
         }),
         ('Datas', {
             'fields': ('created_at', 'updated_at')
@@ -23,10 +26,25 @@ class UsuarioAdmin(UserAdmin):
     readonly_fields = ['created_at', 'updated_at']
     
     add_fieldsets = UserAdmin.add_fieldsets + (
-        ('Informações Adicionais', {
-            'fields': ('email', 'first_name', 'last_name', 'phone', 'birth_date', 'gender')
+        ('Permissões da Academia', {
+            'fields': ('role',)
+        }),
+        ('Contato e Perfil', {
+            'fields': ('phone', 'birth_date', 'gender')
         }),
     )
+
+    def get_readonly_fields(self, request, obj=None):
+        readonly = list(super().get_readonly_fields(request, obj))
+        if not request.user.is_superuser:
+            readonly.append('role')
+        return readonly
+
+    def get_form(self, request, obj=None, **kwargs):
+        form = super().get_form(request, obj, **kwargs)
+        if not request.user.is_superuser and 'role' in form.base_fields:
+            form.base_fields['role'].disabled = True
+        return form
 
 @admin.register(Plano)
 class PlanoAdmin(admin.ModelAdmin):

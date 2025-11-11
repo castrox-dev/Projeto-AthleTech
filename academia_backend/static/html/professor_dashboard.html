@@ -1,0 +1,180 @@
+{% load static %}
+<!DOCTYPE html>
+<html lang="pt-br">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Painel do Professor • AthleTech</title>
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-B/Lk5XlU5IgxkpDqKqCFoYD9tiq6qVgqU5gUjJw9MBQNzEiASQL4W5nz7GVaCi6ctX+pMx2k49+bUNK70CklxQ==" crossorigin="anonymous" referrerpolicy="no-referrer">
+  <link rel="stylesheet" href="{% static 'css/professor.css' %}">
+</head>
+<body>
+  <header class="header">
+    <div class="logo">
+      <i class="fa-solid fa-dumbbell"></i>
+      <span>ATHLETECH • Professor</span>
+    </div>
+    <div class="header-actions">
+      <a class="btn outline" href="#"><i class="fa-solid fa-book"></i>Biblioteca de exercícios</a>
+      <a class="btn primary" href="#"><i class="fa-solid fa-plus"></i>Novo treino</a>
+    </div>
+  </header>
+
+  <main class="main">
+    <section class="section">
+      <div class="section-header">
+        <h1 class="section-title">Resumo rápido</h1>
+        <div class="filters">
+          <select>
+            <option>Esta semana</option>
+            <option>Últimos 15 dias</option>
+            <option>Mês atual</option>
+          </select>
+        </div>
+      </div>
+      <div class="grid two">
+        <article class="card">
+          <div class="card-header">
+            <h2>Alunos acompanhados</h2>
+            <span class="badge"><i class="fa-solid fa-user-group"></i> 37 ativos</span>
+          </div>
+          <p>3 novos alunos aguardando avaliação inicial.</p>
+        </article>
+        <article class="card">
+          <div class="card-header">
+            <h2>Treinos em revisão</h2>
+            <span class="badge"><i class="fa-solid fa-pen"></i> 5 ajustes pendentes</span>
+          </div>
+          <p>Atualize os treinos marcados como "Revisar" pelos alunos.</p>
+        </article>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h1 class="section-title">Agenda de avaliações</h1>
+        <div class="filters">
+          <select>
+            <option>Todos os professores</option>
+            <option>Somente meus alunos</option>
+          </select>
+          <a class="btn outline" href="#"><i class="fa-solid fa-calendar-plus"></i>Nova avaliação</a>
+        </div>
+      </div>
+      <div class="timeline">
+        <div class="timeline-item">
+          <span class="timeline-time">08:30 • 12 MAR</span>
+          <div class="timeline-card">
+            <strong>Juliana Lopes</strong>
+            <p>Reavaliação trimestral • foco: hipertrofia de membros superiores.</p>
+            <div class="filters">
+              <span class="pill accent"><i class="fa-solid fa-dumbbell"></i> Sala funcional</span>
+              <span class="pill success"><i class="fa-solid fa-check"></i> Confirmado</span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">10:00 • 13 MAR</span>
+          <div class="timeline-card">
+            <strong>Rafael Monteiro</strong>
+            <p>Avaliação inicial • retorno de lesão de joelho.</p>
+            <div class="filters">
+              <span class="pill accent"><i class="fa-solid fa-person-running"></i> Reabilitação</span>
+            </div>
+          </div>
+        </div>
+        <div class="timeline-item">
+          <span class="timeline-time">18:15 • 14 MAR</span>
+          <div class="timeline-card">
+            <strong>Maria Clara</strong>
+            <p>Revisão de treino • foco em resistência cardiorrespiratória.</p>
+            <div class="filters">
+              <span class="pill accent"><i class="fa-solid fa-heart-pulse"></i> HIIT</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h1 class="section-title">Treinos ativos</h1>
+        <div class="filters">
+          <select>
+            <option>Todos os alunos</option>
+            <option>Hipertrofia</option>
+            <option>Resistência</option>
+            <option>Reabilitação</option>
+          </select>
+        </div>
+      </div>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>Aluno</th>
+            <th>Objetivo</th>
+            <th>Última atualização</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>Bruno Ferreira</td>
+            <td>Ganho de massa</td>
+            <td>11/03/2025</td>
+            <td><span class="pill success"><i class="fa-solid fa-circle-check"></i> Ativo</span></td>
+            <td><a class="btn outline" href="#"><i class="fa-solid fa-pen-to-square"></i>Editar</a></td>
+          </tr>
+          <tr>
+            <td>Larissa Gomes</td>
+            <td>Reabilitação lombar</td>
+            <td>09/03/2025</td>
+            <td><span class="pill accent"><i class="fa-solid fa-wrench"></i> Ajustes</span></td>
+            <td><a class="btn outline" href="#"><i class="fa-solid fa-pen-to-square"></i>Editar</a></td>
+          </tr>
+          <tr>
+            <td>Tiago Ribeiro</td>
+            <td>Performance triathlon</td>
+            <td>05/03/2025</td>
+            <td><span class="pill success"><i class="fa-solid fa-circle-check"></i> Ativo</span></td>
+            <td><a class="btn outline" href="#"><i class="fa-solid fa-pen-to-square"></i>Editar</a></td>
+          </tr>
+        </tbody>
+      </table>
+    </section>
+
+    <section class="section">
+      <div class="section-header">
+        <h1 class="section-title">Alertas do dia</h1>
+        <a class="btn outline" href="#"><i class="fa-solid fa-rotate"></i>Atualizar</a>
+      </div>
+      <div class="list">
+        <div class="list-item">
+          <div class="info">
+            <strong>Avaliação pendente</strong>
+            <span>Envie o questionário pré-avaliação para Rafael Monteiro.</span>
+          </div>
+          <a class="btn primary" href="#"><i class="fa-solid fa-paper-plane"></i>Enviar agora</a>
+        </div>
+        <div class="list-item">
+          <div class="info">
+            <strong>Feedback recebido</strong>
+            <span>Larissa Gomes enviou comentários sobre o treino do dia A.</span>
+          </div>
+          <a class="btn outline" href="#"><i class="fa-solid fa-message"></i>Responder</a>
+        </div>
+        <div class="list-item">
+          <div class="info">
+            <strong>Treino expirado</strong>
+            <span>Atualize o treino de Diego Nascimento antes de sexta-feira.</span>
+          </div>
+          <a class="btn outline" href="#"><i class="fa-solid fa-calendar"></i>Agendar revisão</a>
+        </div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>
+

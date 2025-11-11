@@ -1,10 +1,12 @@
 
-from django.contrib import admin
-from django.urls import path, include
 from django.conf import settings
 from django.conf.urls.static import static
+from django.contrib import admin
+from django.urls import include, path
 from django.views.generic import TemplateView
 from django.views.static import serve as static_serve
+
+from academia import views as academia_views
 
 urlpatterns = [
     path('admin/', admin.site.urls),
@@ -14,8 +16,11 @@ urlpatterns = [
     
     # URLs para servir as páginas HTML do frontend do usuário
     path('', TemplateView.as_view(template_name='html/home.html'), name='home'),
-    path('login/', TemplateView.as_view(template_name='html/login.html'), name='login'),
-    path('portal/', TemplateView.as_view(template_name='html/portal_frontend.html'), name='portal'),
+    path('login/', academia_views.login_view, name='login'),
+    path('logout/', academia_views.logout_view, name='logout'),
+    path('portal/', academia_views.AlunoPortalPage.as_view(), name='portal'),
+    path('portal/admin/', academia_views.AdminDashboardPage.as_view(), name='portal_admin_dashboard'),
+    path('portal/professor/', academia_views.ProfessorDashboardPage.as_view(), name='portal_professor_dashboard'),
     path('treinos/', TemplateView.as_view(template_name='html/treinos_frontend.html'), name='treinos'),
     path('planos/', TemplateView.as_view(template_name='html/planos_frontend.html'), name='planos'),
     path('cadastro/', TemplateView.as_view(template_name='html/cadastro_frontend.html'), name='cadastro'),

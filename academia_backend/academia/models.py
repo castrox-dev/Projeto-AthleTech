@@ -6,6 +6,11 @@ import uuid
 class Usuario(AbstractUser):
     """Modelo customizado de usuário para a academia"""
     
+    class Role(models.TextChoices):
+        ADMIN = 'admin', 'Administrador'
+        PROFESSOR = 'professor', 'Professor'
+        ALUNO = 'aluno', 'Aluno'
+    
     GENDER_CHOICES = [
     ('male', 'Masculino'),
     ('female', 'Feminino'),
@@ -16,6 +21,7 @@ class Usuario(AbstractUser):
     phone = models.CharField('Telefone', max_length=20, blank=True, null=True)
     birth_date = models.DateField('Data de Nascimento', blank=True, null=True)
     gender = models.CharField('Gênero', max_length=6, choices=GENDER_CHOICES, blank=True, null=True)
+    role = models.CharField('Função', max_length=20, choices=Role.choices, default=Role.ALUNO)
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
     is_active_member = models.BooleanField('Membro Ativo', default=False)
@@ -26,6 +32,31 @@ class Usuario(AbstractUser):
     
     def __str__(self):
         return f"{self.first_name} {self.last_name}" if self.first_name else self.username
+
+    @property
+    def is_academia_admin(self):
+        return self.get_effective_role() == self.Role.ADMIN
+
+    @property
+    def is_professor(self):
+        return self.get_effective_role() == self.Role.PROFESSOR
+
+    def get_effective_role(self) -> str:
+        if self.is_superuser:
+            return self.Role.ADMIN
+        return self.role or self.Role.ALUNO
+
+    def save(self, *args, **kwargs):
+        # Garantir que administradores tenham acesso ao admin do Django
+        self.is_staff = bool((self.role == self.Role.ADMIN) or self.is_superuser)
+        super().save(*args, **kwargs)
+
+    def get_dashboard_url_name(self):
+        if self.is_superuser or self.role == self.Role.ADMIN:
+            return 'portal_admin_dashboard'
+        if self.role == self.Role.PROFESSOR:
+            return 'portal_professor_dashboard'
+        return 'portal'
 
 class Plano(models.Model):
     """Modelo para planos da academia"""

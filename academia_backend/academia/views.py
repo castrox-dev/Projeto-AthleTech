@@ -1,22 +1,48 @@
-from rest_framework import viewsets, status, permissions
+from datetime import timedelta
+
+from django.contrib import messages
+from django.contrib.auth import authenticate, login, logout
+from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.db.models import Q
+from django.shortcuts import render, redirect
+from django.urls import reverse
+from django.utils import timezone
+from django.views.generic import TemplateView
+from rest_framework import permissions, status, viewsets
+from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
-from rest_framework.generics import ListAPIView, RetrieveAPIView
 from rest_framework_simplejwt.tokens import RefreshToken
-from django.contrib.auth import authenticate, login
-from django.shortcuts import render, redirect
-from django.contrib import messages
-from django.db.models import Q
-from django.utils import timezone
-from datetime import timedelta
-from .models import Usuario, Plano, Matricula, Exercicio, Treino, TreinoExercicio, Avaliacao, Frequencia, Pedido
-from .serializers import (
-    UsuarioSerializer, UsuarioProfileSerializer, LoginSerializer,
-    PlanoSerializer, MatriculaSerializer, ExercicioSerializer,
-    TreinoSerializer, AvaliacaoSerializer, FrequenciaSerializer,
-    CheckEmailSerializer, PasswordResetSerializer, EscolherPlanoSerializer,
-    DashboardSerializer, ChangePasswordSerializer, PedidoSerializer
+
+from .models import (
+    Usuario,
+    Plano,
+    Matricula,
+    Exercicio,
+    Treino,
+    TreinoExercicio,
+    Avaliacao,
+    Frequencia,
+    Pedido,
 )
+from .serializers import (
+    UsuarioSerializer,
+    UsuarioProfileSerializer,
+    LoginSerializer,
+    PlanoSerializer,
+    MatriculaSerializer,
+    ExercicioSerializer,
+    TreinoSerializer,
+    AvaliacaoSerializer,
+    FrequenciaSerializer,
+    CheckEmailSerializer,
+    PasswordResetSerializer,
+    EscolherPlanoSerializer,
+    DashboardSerializer,
+    ChangePasswordSerializer,
+    PedidoSerializer,
+)
+from .permissions import IsAcademiaAdmin, IsProfessorOrAdmin
 
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
@@ -30,6 +56,7 @@ class RegisterView(APIView):
                 'user': UsuarioProfileSerializer(user).data,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
+                'redirect_url': reverse(user.get_dashboard_url_name()),
                 'message': 'Usuário criado com sucesso!'
             }, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
@@ -51,6 +78,7 @@ class LoginView(APIView):
                 'user': UsuarioProfileSerializer(user).data,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
+                'redirect_url': reverse(user.get_dashboard_url_name()),
                 'message': 'Login realizado com sucesso!'
             }, status=status.HTTP_200_OK)
 
@@ -118,7 +146,7 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     queryset = Usuario.objects.all()
     serializer_class = UsuarioProfileSerializer
-    permission_classes = [permissions.IsAdminUser]
+    permission_classes = [IsAcademiaAdmin]
     
     def get_queryset(self):
         queryset = Usuario.objects.all()
@@ -141,7 +169,7 @@ class PlanoViewSet(viewsets.ModelViewSet):
         if self.action in ['list', 'retrieve']:
             permission_classes = [permissions.AllowAny]
         else:
-            permission_classes = [permissions.IsAdminUser]
+            permission_classes = [IsAcademiaAdmin]
         return [permission() for permission in permission_classes]
 
 class EscolherPlanoView(APIView):
@@ -193,12 +221,19 @@ class MatriculaViewSet(viewsets.ModelViewSet):
     """ViewSet para matrículas"""
     
     serializer_class = MatriculaSerializer
-    permission_classes = [permissions.IsAuthenticated]
+    
+    def get_permissions(self):
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            permission_classes = [IsAcademiaAdmin]
+        else:
+            permission_classes = [permissions.IsAuthenticated]
+        return [permission() for permission in permission_classes]
     
     def get_queryset(self):
-        if self.request.user.is_staff:
+        user = self.request.user
+        if getattr(user, 'is_academia_admin', False) or getattr(user, 'is_superuser', False):
             return Matricula.objects.all()
-        return Matricula.objects.filter(usuario=self.request.user)
+        return Matricula.objects.filter(usuario=user)
 
 class ExercicioListView(ListAPIView):
     """View para listar exercícios"""
@@ -248,6 +283,62 @@ class TreinoDetailView(RetrieveAPIView):
     
     def get_queryset(self):
         return Treino.objects.filter(usuario=self.request.user)
+
+
+class TreinoManageViewSet(viewsets.ModelViewSet):
+    """ViewSet para gerenciamento de treinos por administradores e professores"""
+    
+    queryset = Treino.objects.all().prefetch_related(
+        'treinoexercicio_set',
+        'treinoexercicio_set__exercicio'
+    )
+    serializer_class = TreinoSerializer
+    permission_classes = [IsProfessorOrAdmin]
+
+
+class BaseRoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
+    allowed_roles: tuple[str, ...] = ()
+
+    def test_func(self):
+        user = self.request.user
+        if not user.is_authenticated:
+            return False
+        if user.is_superuser:
+            return True
+        if not hasattr(user, 'get_effective_role'):
+            return False
+        return user.get_effective_role() in self.allowed_roles
+
+
+class AdminDashboardPage(BaseRoleRequiredMixin, TemplateView):
+    template_name = 'html/admin_dashboard.html'
+    allowed_roles = (Usuario.Role.ADMIN,)
+
+
+class ProfessorDashboardPage(BaseRoleRequiredMixin, TemplateView):
+    template_name = 'html/professor_dashboard.html'
+    allowed_roles = (
+        Usuario.Role.PROFESSOR,
+        Usuario.Role.ADMIN,
+    )
+
+
+class AlunoPortalPage(LoginRequiredMixin, TemplateView):
+    template_name = 'html/portal_frontend.html'
+
+    def dispatch(self, request, *args, **kwargs):
+        user = request.user
+        if not user.is_authenticated:
+            return super().dispatch(request, *args, **kwargs)
+
+        role = user.get_effective_role() if hasattr(user, 'get_effective_role') else Usuario.Role.ALUNO
+
+        if role == Usuario.Role.ADMIN:
+            return redirect('portal_admin_dashboard')
+        if role == Usuario.Role.PROFESSOR:
+            return redirect('portal_professor_dashboard')
+
+        return super().dispatch(request, *args, **kwargs)
 
 class AvaliacaoListView(ListAPIView):
     """View para listar avaliações do usuário"""
@@ -359,14 +450,32 @@ class PixConfirmView(APIView):
 
 def login_view(request):
     if request.method == 'POST':
-        email = request.POST.get('email')
+        identifier = request.POST.get('email')
         password = request.POST.get('password')
 
-        user = authenticate(request, username=email, password=password)
+        user = authenticate(request, username=identifier, password=password)
+        if user is None and identifier:
+            try:
+                user_obj = Usuario.objects.get(email=identifier)
+            except Usuario.DoesNotExist:
+                user_obj = None
+
+            if user_obj:
+                user = authenticate(request, username=user_obj.username, password=password)
+
         if user is not None:
             login(request, user)
-            return redirect('portal')  # redireciona para o portal
+            target = reverse(user.get_dashboard_url_name())
+            return redirect(target)
         else:
             messages.error(request, 'Email ou senha inválidos.')
 
-    return render(request, 'login.html')  # seu template de login
+    if request.user.is_authenticated:
+        return redirect(reverse(request.user.get_dashboard_url_name()))
+
+    return render(request, 'html/login.html')
+
+
+def logout_view(request):
+    logout(request)
+    return redirect('login')
