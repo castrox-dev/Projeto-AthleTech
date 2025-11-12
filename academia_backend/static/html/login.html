@@ -26,7 +26,10 @@
         <div class="user-only" style="display: none;">
           <div class="user-menu" style="display: flex; align-items: center; gap: 8px;">
             <span id="user-name" class="user-name" style="color: #e5e7eb; font-weight: 500; font-size: 0.9rem; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">Carregando...</span>
-            <a href="#" id="logout-btn" class="btn small alt" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Sair</a>
+            <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
+              {% csrf_token %}
+              <button type="submit" id="logout-btn" class="btn small alt" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem; cursor: pointer;">Sair</button>
+            </form>
           </div>
         </div>
       </nav>

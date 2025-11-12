@@ -115,7 +115,10 @@
       <a href="/" class="btn small">Início</a>
       <div class="user-menu">
         <span id="user-name" class="user-name">Carregando...</span>
-        <a href="/login/" class="btn small alt" id="logout-btn">Sair</a>
+        <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="btn small alt" id="logout-btn" style="cursor: pointer;">Sair</button>
+        </form>
       </div>
     </nav>
   </header>

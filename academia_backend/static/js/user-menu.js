@@ -92,15 +92,26 @@ class UserMenu {
 
   setupLogout() {
     const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
+    if (!logoutBtn) {
+      return;
+    }
+
+    const logoutForm = logoutBtn.closest('form');
+
+    if (logoutForm) {
+      logoutForm.addEventListener('submit', (e) => {
+        e.preventDefault();
+        this.logout(() => logoutForm.submit());
+      });
+    } else {
       logoutBtn.addEventListener('click', (e) => {
         e.preventDefault();
-        this.logout();
+        this.logout(() => window.location.href = '/logout/');
       });
     }
   }
 
-  logout() {
+  logout(afterClearCallback) {
     // Limpar tokens
     localStorage.removeItem('access_token');
     localStorage.removeItem('refresh_token');
@@ -109,7 +120,11 @@ class UserMenu {
     localStorage.removeItem('user_data');
     
     // Redirecionar para login
-    window.location.href = '/login/?message=logout_success';
+    if (typeof afterClearCallback === 'function') {
+      afterClearCallback();
+    } else {
+      window.location.href = '/login/?message=logout_success';
+    }
   }
 
   async authenticatedFetch(url, options = {}) {

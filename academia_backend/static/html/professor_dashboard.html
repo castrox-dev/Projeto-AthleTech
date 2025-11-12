@@ -16,8 +16,12 @@
       <span>ATHLETECH • Professor</span>
     </div>
     <div class="header-actions">
-      <a class="btn outline" href="#"><i class="fa-solid fa-book"></i>Biblioteca de exercícios</a>
-      <a class="btn primary" href="#"><i class="fa-solid fa-plus"></i>Novo treino</a>
+      <a href="#" class="btn outline" id="btn-biblioteca"><i class="fa-solid fa-book"></i>Biblioteca de exercícios</a>
+      <a href="#" class="btn primary" id="btn-novo-treino"><i class="fa-solid fa-plus"></i>Novo treino</a>
+      <form method="POST" action="{% url 'logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="btn outline logout-btn"><i class="fa-solid fa-right-from-bracket"></i>Sair</button>
+      </form>
     </div>
   </header>
 
@@ -26,11 +30,14 @@
       <div class="section-header">
         <h1 class="section-title">Resumo rápido</h1>
         <div class="filters">
-          <select>
+          <select id="filter-agenda">
             <option>Esta semana</option>
             <option>Últimos 15 dias</option>
             <option>Mês atual</option>
           </select>
+          <a href="#" class="btn outline" id="btn-nova-avaliacao">
+            <i class="fa-solid fa-calendar-plus"></i>Nova avaliação
+          </a>
         </div>
       </div>
       <div class="grid two">
@@ -59,7 +66,6 @@
             <option>Todos os professores</option>
             <option>Somente meus alunos</option>
           </select>
-          <a class="btn outline" href="#"><i class="fa-solid fa-calendar-plus"></i>Nova avaliação</a>
         </div>
       </div>
       <div class="timeline">
@@ -101,15 +107,15 @@
       <div class="section-header">
         <h1 class="section-title">Treinos ativos</h1>
         <div class="filters">
-          <select>
-            <option>Todos os alunos</option>
-            <option>Hipertrofia</option>
-            <option>Resistência</option>
-            <option>Reabilitação</option>
+          <select id="filter-treinos">
+            <option value="">Todos os objetivos</option>
+            <option value="ganho">Ganho de massa</option>
+            <option value="reabilitação">Reabilitação</option>
+            <option value="performance">Performance</option>
           </select>
         </div>
       </div>
-      <table class="table">
+      <table class="table" id="treinos-table">
         <thead>
           <tr>
             <th>Aluno</th>
@@ -120,27 +126,6 @@
           </tr>
         </thead>
         <tbody>
-          <tr>
-            <td>Bruno Ferreira</td>
-            <td>Ganho de massa</td>
-            <td>11/03/2025</td>
-            <td><span class="pill success"><i class="fa-solid fa-circle-check"></i> Ativo</span></td>
-            <td><a class="btn outline" href="#"><i class="fa-solid fa-pen-to-square"></i>Editar</a></td>
-          </tr>
-          <tr>
-            <td>Larissa Gomes</td>
-            <td>Reabilitação lombar</td>
-            <td>09/03/2025</td>
-            <td><span class="pill accent"><i class="fa-solid fa-wrench"></i> Ajustes</span></td>
-            <td><a class="btn outline" href="#"><i class="fa-solid fa-pen-to-square"></i>Editar</a></td>
-          </tr>
-          <tr>
-            <td>Tiago Ribeiro</td>
-            <td>Performance triathlon</td>
-            <td>05/03/2025</td>
-            <td><span class="pill success"><i class="fa-solid fa-circle-check"></i> Ativo</span></td>
-            <td><a class="btn outline" href="#"><i class="fa-solid fa-pen-to-square"></i>Editar</a></td>
-          </tr>
         </tbody>
       </table>
     </section>
@@ -148,33 +133,54 @@
     <section class="section">
       <div class="section-header">
         <h1 class="section-title">Alertas do dia</h1>
-        <a class="btn outline" href="#"><i class="fa-solid fa-rotate"></i>Atualizar</a>
+        <a href="#" class="btn outline" id="btn-atualizar-alertas"><i class="fa-solid fa-rotate"></i>Atualizar</a>
       </div>
       <div class="list">
-        <div class="list-item">
+        <div class="list-item" data-alert-id="avaliacao">
           <div class="info">
             <strong>Avaliação pendente</strong>
             <span>Envie o questionário pré-avaliação para Rafael Monteiro.</span>
           </div>
-          <a class="btn primary" href="#"><i class="fa-solid fa-paper-plane"></i>Enviar agora</a>
+          <a href="#" class="btn primary btn-alert" data-action="enviar-questionario"><i class="fa-solid fa-paper-plane"></i>Enviar agora</a>
         </div>
-        <div class="list-item">
+        <div class="list-item" data-alert-id="feedback">
           <div class="info">
             <strong>Feedback recebido</strong>
             <span>Larissa Gomes enviou comentários sobre o treino do dia A.</span>
           </div>
-          <a class="btn outline" href="#"><i class="fa-solid fa-message"></i>Responder</a>
+          <a href="#" class="btn outline btn-alert" data-action="responder-feedback"><i class="fa-solid fa-message"></i>Responder</a>
         </div>
-        <div class="list-item">
+        <div class="list-item" data-alert-id="expirado">
           <div class="info">
             <strong>Treino expirado</strong>
             <span>Atualize o treino de Diego Nascimento antes de sexta-feira.</span>
           </div>
-          <a class="btn outline" href="#"><i class="fa-solid fa-calendar"></i>Agendar revisão</a>
+          <a href="#" class="btn outline btn-alert" data-action="agendar-revisao"><i class="fa-solid fa-calendar"></i>Agendar revisão</a>
         </div>
       </div>
     </section>
   </main>
+
+  <div id="modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="modal-title"></h2>
+        <button type="button" id="modal-close" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+      <div id="modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="toast-container" class="toast-container"></div>
+
+  <script>
+    window.PROFESSOR_API_CONFIG = {
+      treinosEndpoint: "{% url 'treino-gerenciar-list' %}",
+      exerciciosEndpoint: "{% url 'exercicios' %}",
+      portalAvaliacoesUrl: "{% url 'portal' %}#avaliacoes"
+    };
+  </script>
+  <script src="{% static 'js/professor-dashboard.js' %}"></script>
 </body>
 </html>
 

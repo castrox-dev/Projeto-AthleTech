@@ -20,7 +20,10 @@
       <div class="user-only" style="display: none;">
         <div class="user-menu">
           <span id="user-name" class="user-name">Carregando...</span>
-          <a href="#" id="logout-btn" class="btn small alt">Sair</a>
+          <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
+            {% csrf_token %}
+            <button type="submit" id="logout-btn" class="btn small alt" style="cursor: pointer;">Sair</button>
+          </form>
         </div>
       </div>
     </nav>

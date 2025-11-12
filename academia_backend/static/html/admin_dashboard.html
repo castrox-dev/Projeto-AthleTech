@@ -24,7 +24,12 @@
         <a href="#financeiro"><i class="fa-solid fa-coins"></i>Financeiro</a>
         <a href="#professores"><i class="fa-solid fa-chalkboard-teacher"></i>Professores</a>
       </nav>
-      <a class="logout" href="{% url 'logout' %}"><i class="fa-solid fa-right-from-bracket"></i> Sair</a>
+      <form method="POST" action="{% url 'logout' %}" class="logout-form">
+        {% csrf_token %}
+        <button type="submit" class="btn logout-btn">
+          <i class="fa-solid fa-right-from-bracket"></i> Sair
+        </button>
+      </form>
     </aside>
 
     <main class="content">
@@ -34,8 +39,8 @@
           <p>Gerencie toda a operação da AthleTech em um único lugar.</p>
         </div>
         <div class="header-actions">
-          <a class="btn outline" href="#"><i class="fa-solid fa-file-export"></i>Relatórios</a>
-          <a class="btn primary" href="#"><i class="fa-solid fa-plus"></i>Novo Plano</a>
+          <button class="btn outline" id="btn-relatorios"><i class="fa-solid fa-file-export"></i>Relatórios</button>
+          <button class="btn primary" id="btn-novo-plano"><i class="fa-solid fa-plus"></i>Novo Plano</button>
         </div>
       </header>
 
@@ -178,39 +183,51 @@
 
       <section class="card" id="professores">
         <h2 class="section-title">Equipe de professores</h2>
-        <table class="table">
-          <thead>
-            <tr>
-              <th>Professor</th>
-              <th>Especialidade</th>
-              <th>Alunos</th>
-              <th>Treinos ativos</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr>
-              <td>Ana Costa</td>
-              <td>Hipertrofia</td>
-              <td>72</td>
-              <td>31</td>
-            </tr>
-            <tr>
-              <td>Marcos Andrade</td>
-              <td>Performance</td>
-              <td>65</td>
-              <td>28</td>
-            </tr>
-            <tr>
-              <td>Carla Nunes</td>
-              <td>Reabilitação</td>
-              <td>44</td>
-              <td>19</td>
-            </tr>
-          </tbody>
-        </table>
+        <div class="professores-header">
+          <button class="btn primary" id="btn-add-professor"><i class="fa-solid fa-user-plus"></i>Adicionar professor</button>
+          <button class="btn outline" id="btn-remover-professor"><i class="fa-solid fa-user-minus"></i>Remover professor</button>
+        </div>
+        <div class="professores-tabela-container">
+          <table class="table" id="tabela-professores">
+            <thead>
+              <tr>
+                <th>Nome</th>
+                <th>Email</th>
+                <th>Especialidade</th>
+                <th>Alunos</th>
+                <th>Treinos ativos</th>
+                <th></th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr><td colspan="6" class="muted" style="text-align:center;">Carregando professores...</td></tr>
+            </tbody>
+          </table>
+        </div>
       </section>
     </main>
   </div>
+
+  <div id="admin-modal-overlay" class="modal-overlay hidden">
+    <div class="modal">
+      <div class="modal-header">
+        <h2 id="admin-modal-title"></h2>
+        <button type="button" id="admin-modal-close" class="modal-close" aria-label="Fechar">&times;</button>
+      </div>
+      <div id="admin-modal-body" class="modal-body"></div>
+    </div>
+  </div>
+
+  <div id="admin-toast-container" class="toast-container"></div>
+
+  <script>
+    window.ADMIN_CONFIG = {
+      professoresEndpoint: "/api/usuarios/",
+      planosEndpoint: "/api/planos/",
+      relatoriosUrl: "/admin/relatorios/exportar/"
+    };
+  </script>
+  <script src="{% static 'js/admin-dashboard.js' %}"></script>
 </body>
 </html>
 

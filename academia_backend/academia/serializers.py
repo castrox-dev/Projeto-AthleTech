@@ -129,12 +129,13 @@ class TreinoSerializer(serializers.ModelSerializer):
         read_only=True
     )
     usuario_nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    exercicios = TreinoExercicioSerializer(many=True, write_only=True, required=False)
     
     class Meta:
         model = Treino
         fields = [
             'id', 'usuario', 'usuario_nome', 'nome', 'descricao',
-            'exercicios_detalhes', 'data_criacao', 'ativo'
+            'exercicios', 'exercicios_detalhes', 'data_criacao', 'ativo'
         ]
         read_only_fields = ['data_criacao']
     
@@ -144,6 +145,25 @@ class TreinoSerializer(serializers.ModelSerializer):
         if 'exercicios_detalhes' not in representation or representation['exercicios_detalhes'] is None:
             representation['exercicios_detalhes'] = []
         return representation
+
+    def create(self, validated_data):
+        exercicios_data = validated_data.pop('exercicios', [])
+        treino = Treino.objects.create(**validated_data)
+        for ordem, exercicio_info in enumerate(exercicios_data, start=1):
+            exercicio = exercicio_info.get('exercicio')
+            if not exercicio:
+                continue
+            TreinoExercicio.objects.create(
+                treino=treino,
+                exercicio=exercicio,
+                series=exercicio_info.get('series') or 3,
+                repeticoes=exercicio_info.get('repeticoes') or 10,
+                peso=exercicio_info.get('peso'),
+                tempo_descanso=exercicio_info.get('tempo_descanso'),
+                observacoes=exercicio_info.get('observacoes', ''),
+                ordem=exercicio_info.get('ordem') or ordem,
+            )
+        return treino
 
 class AvaliacaoSerializer(serializers.ModelSerializer):
     """Serializer para o modelo Avaliacao"""

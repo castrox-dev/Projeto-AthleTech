@@ -1,3 +1,9 @@
+.professor-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
 :root {
   --bg: #080a12;
   --surface: rgba(255, 255, 255, 0.05);
@@ -134,6 +140,7 @@ body {
   text-decoration: none;
   transition: 0.2s ease;
   cursor: pointer;
+  border: 1px solid transparent;
 }
 
 .btn.primary {
@@ -148,12 +155,199 @@ body {
 
 .btn.outline {
   border: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text);
 }
 
-.btn.outline:hover {
-  border-color: rgba(255, 255, 255, 0.4);
+.logout-form {
+  display: inline-flex;
+  margin: 0;
 }
+
+.btn.logout-btn {
+  background: var(--primary);
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn.logout-btn:hover {
+  background: var(--primary-light);
+}
+
+.modal-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.65);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 100;
+  padding: 20px;
+}
+
+.modal-overlay.hidden {
+  display: none;
+}
+
+.modal {
+  background: rgba(12, 16, 28, 0.95);
+  border-radius: 18px;
+  border: 1px solid var(--border);
+  box-shadow: 0 24px 48px rgba(0, 0, 0, 0.4);
+  width: min(640px, 100%);
+  max-height: 90vh;
+  display: flex;
+  flex-direction: column;
+}
+
+.modal-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-body {
+  padding: 24px;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.modal-footer {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  padding: 0 24px 24px;
+}
+
+.modal-close {
+  background: transparent;
+  border: none;
+  color: var(--muted);
+  font-size: 1.5rem;
+  cursor: pointer;
+}
+
+.modal-close:hover {
+  color: var(--text);
+}
+
+.modal-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.modal-grid label {
+  font-weight: 600;
+}
+
+.modal-grid input,
+.modal-grid textarea,
+.modal-grid select {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  color: var(--text);
+  padding: 10px 12px;
+  font-size: 0.95rem;
+}
+
+.modal-grid textarea {
+  resize: vertical;
+  min-height: 120px;
+}
+
+.report-list {
+  list-style: none;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.report-list a {
+  color: var(--text);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.report-list a:hover {
+  text-decoration: underline;
+}
+
+.professores-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  z-index: 120;
+}
+
+.toast {
+  background: rgba(15, 20, 36, 0.95);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  color: var(--text);
+  padding: 14px 18px;
+  border-radius: 12px;
+  min-width: 240px;
+  max-width: 320px;
+  box-shadow: 0 18px 30px rgba(0, 0, 0, 0.35);
+  display: flex;
+  gap: 12px;
+}
+
+.toast.success {
+  border-left-color: #10b981;
+}
+
+.toast.error {
+  border-left-color: #ef4444;
+}
+
+.toast.fade-out {
+  opacity: 0;
+  transform: translateY(10px);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.professores-header {
+  display: flex;
+  gap: 12px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.professores-tabela-container {
+  overflow-x: auto;
+}
+
+.professor-identificacao {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.professor-identificacao .muted {
+  color: var(--muted);
+  font-size: 0.85rem;
+}
+
 
 .overview {
   display: grid;

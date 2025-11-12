@@ -189,6 +189,11 @@ class Avaliacao(models.Model):
     percentual_gordura = models.DecimalField('% Gordura', max_digits=5, decimal_places=2, blank=True, null=True)
     massa_muscular = models.DecimalField('Massa Muscular (kg)', max_digits=5, decimal_places=2, blank=True, null=True)
     imc = models.DecimalField('IMC', max_digits=5, decimal_places=2, blank=True, null=True)
+    perimetro_peito = models.DecimalField('Perímetro Peito (cm)', max_digits=5, decimal_places=2, blank=True, null=True)
+    perimetro_cintura = models.DecimalField('Perímetro Cintura (cm)', max_digits=5, decimal_places=2, blank=True, null=True)
+    perimetro_quadril = models.DecimalField('Perímetro Quadril (cm)', max_digits=5, decimal_places=2, blank=True, null=True)
+    perimetro_braco = models.DecimalField('Perímetro Braço (cm)', max_digits=5, decimal_places=2, blank=True, null=True)
+    perimetro_coxa = models.DecimalField('Perímetro Coxa (cm)', max_digits=5, decimal_places=2, blank=True, null=True)
     observacoes = models.TextField('Observações', blank=True)
     created_at = models.DateTimeField('Criado em', auto_now_add=True)
     

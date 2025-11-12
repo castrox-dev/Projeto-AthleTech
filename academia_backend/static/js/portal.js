@@ -1,41 +1,54 @@
-document.addEventListener('DOMContentLoaded', async function() {
-  // Base URL from global config if available
+document.addEventListener('DOMContentLoaded', async function () {
   const API_BASE_URL = (window.API_CONFIG && window.API_CONFIG.API_BASE_URL) || '/api';
 
-  // Require auth
-  const accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
-  const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
-  if (!accessToken) {
-    window.location.href = '/login/?message=login_required&redirect=/portal/';
-    return;
-  }
+  const getAccessToken = () => localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+  const getRefreshToken = () => localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
+
+  const buildHeaders = (extra = {}) => {
+    const headers = { 'Content-Type': 'application/json', ...extra };
+    const token = getAccessToken();
+    if (token) {
+      headers.Authorization = `Bearer ${token}`;
+    }
+    return headers;
+  };
 
   async function authenticatedFetch(url, options = {}) {
-    const headers = Object.assign(
-      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('accessToken')}` },
-      options.headers || {}
-    );
-    const res = await fetch(url, { ...options, headers });
-    if (res.status === 401 && refreshToken) {
-      const r = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: refreshToken })
-      });
-      if (r.ok) {
-        const data = await r.json();
-        localStorage.setItem('access_token', data.access);
-        // retry once
-        return await fetch(url, { ...options, headers: { ...headers, 'Authorization': `Bearer ${data.access}` } });
-      } else {
+    const opts = {
+      method: options.method || 'GET',
+      headers: buildHeaders(options.headers),
+      credentials: 'include',
+      body: options.body,
+    };
+
+    const res = await fetch(url, opts);
+    if (res.status === 401) {
+      const refreshToken = getRefreshToken();
+      if (refreshToken) {
+        const refreshRes = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh: refreshToken }),
+        });
+        if (refreshRes.ok) {
+          const data = await refreshRes.json();
+          localStorage.setItem('access_token', data.access);
+          return await fetch(url, {
+            ...opts,
+            headers: buildHeaders(options.headers),
+          });
+        }
+
         localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
         localStorage.removeItem('accessToken');
+        localStorage.removeItem('refresh_token');
         localStorage.removeItem('refreshToken');
-        window.location.href = '/login/?message=session_expired&redirect=/portal/';
-        return null;
       }
+
+      window.location.href = '/login/?message=login_required&redirect=/portal/';
+      return null;
     }
+
     return res;
   }
 
@@ -58,8 +71,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (userNameElement) {
         userNameElement.textContent = nome;
       }
-      
-      // Show user menu
+
       const loginElements = document.querySelectorAll('.login-only');
       const userElements = document.querySelectorAll('.user-only');
       loginElements.forEach(el => el.style.display = 'none');
@@ -80,9 +92,27 @@ document.addEventListener('DOMContentLoaded', async function() {
       const alturaCm = parseFloat(data.ultima_avaliacao.altura || 0);
       const alturaM = alturaCm ? alturaCm / 100.0 : 0;
       const imc = alturaM ? (peso / (alturaM * alturaM)) : (data.ultima_avaliacao.imc || 0);
-      if (!isNaN(peso)) document.getElementById('aluno-peso').textContent = `${peso.toFixed(1)} kg`;
-      if (!isNaN(alturaM) && alturaM) document.getElementById('aluno-altura').textContent = `${alturaM.toFixed(2)} m`;
-      if (!isNaN(imc) && imc) document.getElementById('aluno-imc').textContent = Number(imc).toFixed(1);
+
+      if (!Number.isNaN(peso)) document.getElementById('aluno-peso').textContent = `${peso.toFixed(1)} kg`;
+      if (!Number.isNaN(alturaM) && alturaM) document.getElementById('aluno-altura').textContent = `${alturaM.toFixed(2)} m`;
+      if (!Number.isNaN(imc) && imc) document.getElementById('aluno-imc').textContent = Number(imc).toFixed(1);
+
+      const setCm = (id, value) => {
+        const el = document.getElementById(id);
+        if (!el) return;
+        if (value === null || value === undefined || value === '') {
+          el.textContent = '--';
+        } else {
+          const num = parseFloat(value);
+          el.textContent = Number.isNaN(num) ? '--' : `${num.toFixed(1)} cm`;
+        }
+      };
+
+      setCm('aluno-peito', data.ultima_avaliacao.perimetro_peito);
+      setCm('aluno-cintura', data.ultima_avaliacao.perimetro_cintura);
+      setCm('aluno-quadril', data.ultima_avaliacao.perimetro_quadril);
+      setCm('aluno-braco', data.ultima_avaliacao.perimetro_braco);
+      setCm('aluno-coxa', data.ultima_avaliacao.perimetro_coxa);
     }
 
     // bloquear acesso se não tem matrícula ativa
@@ -180,16 +210,27 @@ document.addEventListener('DOMContentLoaded', async function() {
           tabelaBody.innerHTML = '';
           
           if (!avaliacoesData.results || avaliacoesData.results.length === 0) {
-            tabelaBody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align: center;">Nenhuma avaliação registrada ainda.</td></tr>';
+            tabelaBody.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">Nenhuma avaliação registrada ainda.</td></tr>';
           } else {
             avaliacoesData.results.forEach(av => {
               const dataAval = new Date(av.data_avaliacao);
+              const formatKg = (value) => value ? `${parseFloat(value).toFixed(1)} kg` : '--';
+              const formatPercent = (value) => value ? `${parseFloat(value).toFixed(1)}%` : '--';
+              const formatCm = (value) => value ? `${parseFloat(value).toFixed(1)} cm` : '--';
+              const formatImc = (value) => value ? parseFloat(value).toFixed(1) : '--';
+
               const row = document.createElement('tr');
               row.innerHTML = `
                 <td>${dataAval.toLocaleDateString('pt-BR')}</td>
-                <td>${av.peso ? av.peso + ' kg' : '--'}</td>
-                <td>${av.percentual_gordura ? av.percentual_gordura + '%' : '--'}</td>
-                <td>${av.massa_muscular ? av.massa_muscular + ' kg' : '--'}</td>
+                <td>${formatKg(av.peso)}</td>
+                <td>${formatImc(av.imc)}</td>
+                <td>${formatPercent(av.percentual_gordura)}</td>
+                <td>${formatKg(av.massa_muscular)}</td>
+                <td>${formatCm(av.perimetro_peito)}</td>
+                <td>${formatCm(av.perimetro_cintura)}</td>
+                <td>${formatCm(av.perimetro_quadril)}</td>
+                <td>${formatCm(av.perimetro_braco)}</td>
+                <td>${formatCm(av.perimetro_coxa)}</td>
                 <td>${av.observacoes || '--'}</td>
               `;
               tabelaBody.appendChild(row);
@@ -201,7 +242,7 @@ document.addEventListener('DOMContentLoaded', async function() {
       console.error('Erro ao carregar avaliações:', e);
       const tabelaBody = document.querySelector('#tabela-avaliacoes tbody');
       if (tabelaBody) {
-        tabelaBody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align: center;">Erro ao carregar avaliações.</td></tr>';
+        tabelaBody.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">Erro ao carregar avaliações.</td></tr>';
       }
     }
 
@@ -247,17 +288,26 @@ document.addEventListener('DOMContentLoaded', async function() {
   // Setup logout functionality
   const logoutBtn = document.getElementById('logout-btn');
   if (logoutBtn) {
-    logoutBtn.addEventListener('click', function(e) {
-      e.preventDefault();
-      // Clear tokens
-      localStorage.removeItem('access_token');
-      localStorage.removeItem('refresh_token');
-      localStorage.removeItem('accessToken');
-      localStorage.removeItem('refreshToken');
-      localStorage.removeItem('user_data');
-      // Redirect to login
-      window.location.href = '/login/?message=logout_success';
-    });
+    const logoutForm = logoutBtn.closest('form');
+    if (logoutForm) {
+      logoutForm.addEventListener('submit', () => {
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user_data');
+      });
+    } else {
+      logoutBtn.addEventListener('click', function (e) {
+        e.preventDefault();
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        localStorage.removeItem('user_data');
+        window.location.href = '/login/?message=logout_success';
+      });
+    }
   }
 });
 

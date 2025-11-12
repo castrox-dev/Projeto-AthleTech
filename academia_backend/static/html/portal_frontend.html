@@ -18,7 +18,10 @@
       <a href="/" class="btn small">Início</a>
       <div class="user-menu">
         <span id="user-name" class="user-name">Carregando...</span>
-        <a href="/login/" class="btn small alt" id="logout-btn">Sair</a>
+        <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="btn small alt" id="logout-btn" style="cursor: pointer;">Sair</button>
+        </form>
       </div>
     </nav>
   </header>
@@ -115,6 +118,11 @@
               <li><span>IMC</span><strong id="aluno-imc">--</strong></li>
               <li><span>% Gordura</span><strong id="aluno-gordura">--</strong></li>
               <li><span>Massa Muscular</span><strong id="aluno-muscular">--</strong></li>
+              <li><span>Perímetro Peito</span><strong id="aluno-peito">--</strong></li>
+              <li><span>Perímetro Cintura</span><strong id="aluno-cintura">--</strong></li>
+              <li><span>Perímetro Quadril</span><strong id="aluno-quadril">--</strong></li>
+              <li><span>Perímetro Braço</span><strong id="aluno-braco">--</strong></li>
+              <li><span>Perímetro Coxa</span><strong id="aluno-coxa">--</strong></li>
             </ul>
             <p class="muted" style="margin-top: 1rem; font-size: 0.875rem;">
               <i class="fa-solid fa-info-circle"></i> 
@@ -126,10 +134,22 @@
             <div style="overflow-x: auto;">
               <table class="table" id="tabela-avaliacoes">
                 <thead>
-                  <tr><th>Data</th><th>Peso</th><th>Gordura %</th><th>Muscular %</th><th>Observações</th></tr>
+                  <tr>
+                    <th>Data</th>
+                    <th>Peso</th>
+                    <th>IMC</th>
+                    <th>Gordura %</th>
+                    <th>Massa muscular</th>
+                    <th>Peito</th>
+                    <th>Cintura</th>
+                    <th>Quadril</th>
+                    <th>Braço</th>
+                    <th>Coxa</th>
+                    <th>Observações</th>
+                  </tr>
                 </thead>
                 <tbody>
-                  <tr><td colspan="5" class="muted" style="text-align: center;">Carregando avaliações...</td></tr>
+                  <tr><td colspan="11" class="muted" style="text-align: center;">Carregando avaliações...</td></tr>
                 </tbody>
               </table>
             </div>

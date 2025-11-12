@@ -7,12 +7,14 @@ from django.db.models import Q
 from django.shortcuts import render, redirect
 from django.urls import reverse
 from django.utils import timezone
+from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 from rest_framework import permissions, status, viewsets
-from rest_framework.generics import ListAPIView, RetrieveAPIView
+from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
 from rest_framework_simplejwt.tokens import RefreshToken
+from rest_framework.exceptions import PermissionDenied, ValidationError
 
 from .models import (
     Usuario,
@@ -340,14 +342,56 @@ class AlunoPortalPage(LoginRequiredMixin, TemplateView):
 
         return super().dispatch(request, *args, **kwargs)
 
-class AvaliacaoListView(ListAPIView):
-    """View para listar avaliações do usuário"""
+class AvaliacaoListView(ListCreateAPIView):
+    """View para listar avaliações do usuário e permitir cadastro por professores"""
     
     serializer_class = AvaliacaoSerializer
     permission_classes = [permissions.IsAuthenticated]
     
     def get_queryset(self):
-        return Avaliacao.objects.filter(usuario=self.request.user)
+        user = self.request.user
+        effective_role = user.get_effective_role() if hasattr(user, 'get_effective_role') else None
+        if user.is_superuser or effective_role in (Usuario.Role.ADMIN, Usuario.Role.PROFESSOR):
+            aluno_id = self.request.query_params.get('usuario')
+            if aluno_id:
+                return Avaliacao.objects.filter(usuario_id=aluno_id)
+            return Avaliacao.objects.all()
+        return Avaliacao.objects.filter(usuario=user)
+    
+    def perform_create(self, serializer):
+        user = self.request.user
+        effective_role = user.get_effective_role() if hasattr(user, 'get_effective_role') else None
+        if not (user.is_superuser or effective_role in (Usuario.Role.ADMIN, Usuario.Role.PROFESSOR)):
+            raise PermissionDenied('Apenas professores ou administradores podem registrar avaliações.')
+        
+        aluno_id = self.request.data.get('usuario')
+        aluno_nome = self.request.data.get('usuario_nome')
+
+        try:
+            if aluno_id:
+                aluno = Usuario.objects.get(id=aluno_id)
+            elif aluno_nome:
+                nome_normalizado = aluno_nome.strip()
+                if not nome_normalizado:
+                    raise ValidationError({'usuario_nome': 'Informe o nome completo do aluno.'})
+                partes = nome_normalizado.split()
+                primeiro_nome = partes[0]
+                restante = " ".join(partes[1:]) if len(partes) > 1 else ''
+                consulta = Usuario.objects.filter(
+                    Q(first_name__iexact=primeiro_nome) |
+                    Q(username__iexact=nome_normalizado)
+                )
+                if restante:
+                    consulta = consulta.filter(Q(last_name__icontains=restante) | Q(username__iexact=nome_normalizado))
+                aluno = consulta.first()
+                if not aluno:
+                    raise Usuario.DoesNotExist
+            else:
+                raise ValidationError({'usuario': 'Informe o ID ou o nome completo do aluno.'})
+        except Usuario.DoesNotExist:
+            raise ValidationError({'usuario': 'Aluno não encontrado.'})
+        
+        serializer.save(usuario=aluno)
 
 class DashboardView(APIView):
     """View para dados do dashboard do usuário"""
@@ -470,12 +514,10 @@ def login_view(request):
         else:
             messages.error(request, 'Email ou senha inválidos.')
 
-    if request.user.is_authenticated:
-        return redirect(reverse(request.user.get_dashboard_url_name()))
-
     return render(request, 'html/login.html')
 
 
+@require_POST
 def logout_view(request):
     logout(request)
     return redirect('login')
