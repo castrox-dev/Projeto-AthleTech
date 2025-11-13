@@ -272,7 +272,7 @@ async function verificarToken() {
     
     try {
         // Verificar se o token ainda é válido
-        const response = await fetch(`${API_BASE_URL}/auth/verify/`, {
+        const response = await fetch(`${API_BASE_URL}/auth/token/verify/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -285,7 +285,7 @@ async function verificarToken() {
         }
         
         // Se o token expirou, tentar renovar
-        const refreshResponse = await fetch(`${API_BASE_URL}/auth/refresh/`, {
+        const refreshResponse = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -299,12 +299,14 @@ async function verificarToken() {
             return true;
         }
         
-        // Se não conseguiu renovar, fazer logout
-        logout();
+        // Se não conseguiu renovar, apenas retornar false sem deslogar
+        // O logout só deve acontecer quando o usuário realmente não conseguir usar a aplicação
+        console.warn('Não foi possível renovar o token, mas mantendo sessão ativa');
         return false;
         
     } catch (error) {
         console.error('Erro ao verificar token:', error);
+        // Não deslogar em caso de erro de rede ou temporário
         return false;
     }
 }

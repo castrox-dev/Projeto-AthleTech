@@ -1,5 +1,6 @@
 (() => {
   const config = window.PROFESSOR_API_CONFIG || {};
+  const API_BASE_URL = (window.API_CONFIG && window.API_CONFIG.API_BASE_URL) || '/api';
   const treinosEndpoint = config.treinosEndpoint || '/api/treinos/gerenciar/';
   const exerciciosEndpoint = config.exerciciosEndpoint || '/api/exercicios/';
   const modalOverlay = document.getElementById('modal-overlay');
@@ -11,6 +12,127 @@
   const filterTreinosSelect = document.getElementById('filter-treinos');
 
   let treinosCache = [];
+
+  // Verificar autenticação e role do usuário
+  const checkAuthAndRole = async () => {
+    // Evitar múltiplas verificações simultâneas
+    if (window.professorAuthCheckInProgress) {
+      console.log('Professor-dashboard.js: Verificação de autenticação já em progresso, aguardando...');
+      return true;
+    }
+    window.professorAuthCheckInProgress = true;
+
+    const accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
+    
+    if (!accessToken) {
+      window.professorAuthCheckInProgress = false;
+      window.location.href = '/login/?message=login_required&redirect=/portal/professor/';
+      return false;
+    }
+
+    try {
+      // Buscar dados do usuário do dashboard para verificar role
+      const response = await fetch(`${API_BASE_URL}/dashboard/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        credentials: 'include'
+      });
+
+      if (response.status === 401) {
+        // Token expirado, tentar renovar
+        if (refreshToken) {
+          const refreshResponse = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: refreshToken })
+          });
+
+          if (refreshResponse.ok) {
+            const tokenData = await refreshResponse.json();
+            localStorage.setItem('access_token', tokenData.access);
+            // Tentar novamente com o novo token
+            const retryResponse = await fetch(`${API_BASE_URL}/dashboard/`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${tokenData.access}`
+              },
+              credentials: 'include'
+            });
+            
+            if (!retryResponse.ok) {
+              throw new Error('Não autorizado após renovar token');
+            }
+            
+            const dashboardData = await retryResponse.json();
+            const result = checkUserRole(dashboardData);
+            window.professorAuthCheckInProgress = false;
+            return result;
+          }
+        }
+        
+        // Não conseguiu renovar, mas se já está na página do professor, não redirecionar
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/portal/professor/')) {
+          console.warn('Professor-dashboard.js: Token expirado mas já está na página do professor, permitindo acesso');
+          window.professorAuthCheckInProgress = false;
+          return true;
+        }
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.professorAuthCheckInProgress = false;
+        window.location.href = '/login/?message=session_expired&redirect=/portal/professor/';
+        return false;
+      }
+
+      if (!response.ok) {
+        throw new Error('Erro ao verificar autenticação');
+      }
+
+      const dashboardData = await response.json();
+      const result = checkUserRole(dashboardData);
+      window.professorAuthCheckInProgress = false;
+      return result;
+    } catch (error) {
+      console.error('Erro ao verificar autenticação:', error);
+      window.professorAuthCheckInProgress = false;
+      // Não redirecionar se já estiver na página do professor - pode ser erro temporário
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/portal/professor/')) {
+        console.warn('Professor-dashboard.js: Erro na verificação mas já está na página do professor, permitindo acesso');
+        return true;
+      }
+      window.location.href = '/login/?message=login_required&redirect=/portal/professor/';
+      return false;
+    }
+  };
+
+  const checkUserRole = (dashboardData) => {
+    // Verificar role do usuário
+    const user = dashboardData.user || {};
+    const userRole = user.role || dashboardData.role;
+    const isSuperuser = user.is_superuser || false;
+    const currentPath = window.location.pathname;
+    
+    console.log('Professor-dashboard.js: Verificando role do usuário:', { userRole, isSuperuser, user, currentPath });
+    
+    // Se está na página do professor, SEMPRE permitir acesso (evitar loops)
+    // A verificação de role será feita no backend se necessário
+    if (currentPath.includes('/portal/professor/')) {
+      console.log('Professor-dashboard.js: Está na página do professor, permitindo acesso (evitando loops)');
+      return true;
+    }
+    
+    // Se não está na página do professor, permitir acesso (não deveria acontecer, mas por segurança)
+    console.log('Professor-dashboard.js: Não está na página do professor, permitindo acesso');
+    return true;
+  };
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -37,6 +159,9 @@
   };
 
   const apiRequest = async (url, { method = 'GET', body, headers = {}, expectJSON = true } = {}) => {
+    // Obter token JWT do localStorage
+    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    
     const opts = {
       method,
       headers: {
@@ -45,6 +170,11 @@
       },
       credentials: 'include',
     };
+
+    // Adicionar token JWT no header Authorization se disponível
+    if (token) {
+      opts.headers['Authorization'] = `Bearer ${token}`;
+    }
 
     if (body) {
       opts.body = typeof body === 'string' ? body : JSON.stringify(body);
@@ -55,7 +185,42 @@
       }
     }
 
-    const response = await fetch(url, opts);
+    let response = await fetch(url, opts);
+    
+    // Se receber 401 (não autorizado), tentar renovar o token
+    if (response.status === 401) {
+      const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh: refreshToken }),
+          });
+          
+          if (refreshResponse.ok) {
+            const tokenData = await refreshResponse.json();
+            localStorage.setItem('access_token', tokenData.access);
+            // Tentar novamente com o novo token
+            opts.headers['Authorization'] = `Bearer ${tokenData.access}`;
+            response = await fetch(url, opts);
+          } else {
+            // Se não conseguir renovar, limpar tokens e redirecionar para login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('refreshToken');
+            window.location.href = '/login/?message=session_expired';
+            return;
+          }
+        } catch (err) {
+          console.error('Erro ao renovar token:', err);
+        }
+      }
+    }
+    
     if (!response.ok) {
       let errorDetail = 'Erro inesperado';
       try {
@@ -703,7 +868,59 @@
     showToast('Alertas atualizados com os últimos eventos.', 'success', 'Atualizado');
   };
 
-  const init = () => {
+  const setupLogout = () => {
+    const logoutForm = document.querySelector('.logout-form');
+    if (!logoutForm) {
+      return;
+    }
+
+    logoutForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Limpar todos os tokens JWT do localStorage
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user_data');
+      
+      // Limpar flags de redirecionamento
+      window.portalRedirectInProgress = false;
+      window.adminRedirectInProgress = false;
+      window.professorRedirectInProgress = false;
+      window.portalScriptExecuted = false;
+      window.adminDashboardScriptExecuted = false;
+      window.professorDashboardScriptExecuted = false;
+      window.professorAuthCheckInProgress = false;
+      
+      console.log('Professor-dashboard.js: Tokens limpos, redirecionando para login');
+      
+      // Redirecionar para login
+      window.location.href = '/login/?message=logout_success';
+    });
+  };
+
+  const init = async () => {
+    // Evitar múltiplas execuções
+    if (window.professorDashboardScriptExecuted) {
+      console.log('Professor-dashboard.js: Script já foi executado, ignorando');
+      return;
+    }
+    window.professorDashboardScriptExecuted = true;
+
+    // Verificar autenticação e role antes de inicializar
+    // Mas apenas se não houver redirecionamento em progresso
+    if (window.professorRedirectInProgress || window.portalRedirectInProgress) {
+      console.log('Professor-dashboard.js: Redirecionamento em progresso, ignorando verificação');
+      return;
+    }
+
+    const isAuthorized = await checkAuthAndRole();
+    if (!isAuthorized) {
+      console.log('Professor-dashboard.js: Não autorizado, não continuando');
+      return; // Não continuar se não estiver autorizado
+    }
+
     document.getElementById('btn-biblioteca')?.addEventListener('click', (event) => {
       event.preventDefault();
       openBibliotecaModal();
@@ -734,6 +951,9 @@
     });
 
     loadTreinos();
+    
+    // Configurar logout para limpar tokens JWT
+    setupLogout();
   };
 
   document.addEventListener('DOMContentLoaded', init);

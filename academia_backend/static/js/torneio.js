@@ -252,6 +252,138 @@
   };
 
   // Carrega lista de torneios na tela inicial
+  // Carregar e renderizar calendário de competições
+  const loadCalendario = async () => {
+    try {
+      const torneios = await apiRequest('/torneios/');
+      const calendarioContent = document.getElementById('calendario-content');
+      
+      let torneiosArray = [];
+      if (Array.isArray(torneios)) {
+        torneiosArray = torneios;
+      } else if (torneios.results) {
+        torneiosArray = torneios.results;
+      } else if (torneios) {
+        torneiosArray = [torneios];
+      }
+      
+      // Filtrar apenas torneios futuros ou em andamento
+      const hoje = new Date();
+      hoje.setHours(0, 0, 0, 0);
+      
+      const torneiosFuturos = torneiosArray.filter(torneio => {
+        if (!torneio.data_inicio) return false;
+        const dataInicio = new Date(torneio.data_inicio);
+        dataInicio.setHours(0, 0, 0, 0);
+        return dataInicio >= hoje || torneio.status === 'em_andamento' || torneio.status === 'inscricoes_abertas';
+      }).sort((a, b) => {
+        const dataA = new Date(a.data_inicio || 0);
+        const dataB = new Date(b.data_inicio || 0);
+        return dataA - dataB;
+      }).slice(0, 6); // Limitar a 6 próximos
+      
+      if (torneiosFuturos.length === 0) {
+        calendarioContent.innerHTML = '<p style="text-align: center; color: var(--muted);">Nenhuma competição agendada no momento.</p>';
+        return;
+      }
+      
+      // Renderizar calendário mensal
+      const mesAtual = hoje.getMonth();
+      const anoAtual = hoje.getFullYear();
+      const primeiroDia = new Date(anoAtual, mesAtual, 1);
+      const ultimoDia = new Date(anoAtual, mesAtual + 1, 0);
+      const diasNoMes = ultimoDia.getDate();
+      const diaSemanaInicio = primeiroDia.getDay();
+      
+      const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
+      const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
+                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
+      
+      // Mapear torneios por dia
+      const torneiosPorDia = {};
+      torneiosFuturos.forEach(torneio => {
+        if (torneio.data_inicio) {
+          const data = new Date(torneio.data_inicio);
+          const dia = data.getDate();
+          const mes = data.getMonth();
+          const ano = data.getFullYear();
+          
+          if (mes === mesAtual && ano === anoAtual) {
+            if (!torneiosPorDia[dia]) {
+              torneiosPorDia[dia] = [];
+            }
+            torneiosPorDia[dia].push(torneio);
+          }
+        }
+      });
+      
+      let calendarioHTML = `
+        <div style="margin-bottom: 1.5rem;">
+          <h3 style="margin: 0 0 1rem 0; color: var(--text);">${meses[mesAtual]} ${anoAtual}</h3>
+          <div class="calendario-mes">
+            ${diasSemana.map(dia => `<div class="calendario-dia-semana">${dia}</div>`).join('')}
+      `;
+      
+      // Espaços vazios antes do primeiro dia
+      for (let i = 0; i < diaSemanaInicio; i++) {
+        calendarioHTML += '<div class="calendario-dia" style="visibility: hidden;"></div>';
+      }
+      
+      // Dias do mês
+      for (let dia = 1; dia <= diasNoMes; dia++) {
+        const temEvento = torneiosPorDia[dia];
+        const isHoje = dia === hoje.getDate();
+        const classeDia = temEvento ? 'tem-evento' : '';
+        const estiloHoje = isHoje ? 'border: 2px solid var(--primary);' : '';
+        
+        calendarioHTML += `
+          <div class="calendario-dia ${classeDia}" style="${estiloHoje}" 
+               ${temEvento ? `onclick="verDetalhesTorneio(${torneiosPorDia[dia][0].id})" title="${torneiosPorDia[dia].map(t => t.nome).join(', ')}"` : ''}>
+            <div class="calendario-dia-numero">${dia}</div>
+            ${temEvento ? `<div class="calendario-dia-evento">${torneiosPorDia[dia].length} evento${torneiosPorDia[dia].length > 1 ? 's' : ''}</div>` : ''}
+          </div>
+        `;
+      }
+      
+      calendarioHTML += '</div></div>';
+      
+      // Lista de próximas competições
+      calendarioHTML += `
+        <div style="margin-top: 2rem;">
+          <h3 style="margin: 0 0 1rem 0; color: var(--text);">Próximas Competições</h3>
+          <div class="calendario-grid">
+            ${torneiosFuturos.map(torneio => {
+              const dataInicio = torneio.data_inicio ? new Date(torneio.data_inicio) : null;
+              const dataFormatada = dataInicio ? dataInicio.toLocaleDateString('pt-BR', { 
+                day: '2-digit', 
+                month: 'short', 
+                year: 'numeric' 
+              }) : 'Data não definida';
+              
+              return `
+                <div class="calendario-item" onclick="verDetalhesTorneio(${torneio.id})">
+                  <div class="calendario-data">
+                    <i class="fa-solid fa-calendar"></i> ${dataFormatada}
+                  </div>
+                  <div class="calendario-nome">${torneio.nome || 'Sem nome'}</div>
+                  <span class="calendario-status status-${torneio.status || 'inscricoes_abertas'}">
+                    ${statusText[torneio.status] || 'Inscrições Abertas'}
+                  </span>
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `;
+      
+      calendarioContent.innerHTML = calendarioHTML;
+    } catch (error) {
+      console.error('Erro ao carregar calendário:', error);
+      const calendarioContent = document.getElementById('calendario-content');
+      calendarioContent.innerHTML = '<p style="text-align: center; color: var(--muted);">Erro ao carregar calendário.</p>';
+    }
+  };
+
   const loadTorneios = async () => {
     try {
       const torneios = await apiRequest('/torneios/');
@@ -477,7 +609,21 @@
   // Toggle sidebar no mobile
   window.toggleSidebar = () => {
     const sidebar = document.getElementById('sidebar-admin');
-    sidebar.classList.toggle('open');
+    const overlay = document.getElementById('sidebar-overlay');
+    
+    if (sidebar && overlay) {
+      const isOpen = sidebar.classList.contains('open');
+      
+      if (isOpen) {
+        // Fechar sidebar
+        sidebar.classList.remove('open');
+        overlay.classList.remove('active');
+      } else {
+        // Abrir sidebar
+        sidebar.classList.add('open');
+        overlay.classList.add('active');
+      }
+    }
   };
 
   // Carregar formulário de criar torneio
@@ -705,13 +851,29 @@
   document.addEventListener('DOMContentLoaded', async () => {
     await loadUserInfo();
     
+    const sidebarAdmin = document.getElementById('sidebar-admin');
+    const portalLayout = document.querySelector('.portal-layout');
+    
     // Mostrar sidebar se for admin
     if (isAdmin()) {
-      document.getElementById('sidebar-admin').style.display = 'block';
-      document.getElementById('btn-toggle-sidebar').style.display = 'block';
-      document.querySelector('.content-torneio').classList.add('with-sidebar');
+      if (sidebarAdmin) {
+        sidebarAdmin.style.display = 'flex';
+      }
+      if (portalLayout) {
+        portalLayout.classList.remove('without-sidebar');
+      }
+    } else {
+      // Se não for admin, garantir que sidebar está oculta e adicionar classe para centralizar
+      if (sidebarAdmin) {
+        sidebarAdmin.style.display = 'none';
+      }
+      if (portalLayout) {
+        portalLayout.classList.add('without-sidebar');
+      }
     }
     
+    // Carregar calendário e lista de torneios
+    await loadCalendario();
     await loadTorneios();
   });
 })();

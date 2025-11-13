@@ -50,9 +50,9 @@ class UsuarioProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'birth_date', 'gender', 'role', 'is_active_member',
-            'created_at', 'updated_at'
+            'is_superuser', 'created_at', 'updated_at'
         ]
-        read_only_fields = ['id', 'username', 'created_at', 'updated_at', 'role']
+        read_only_fields = ['id', 'username', 'created_at', 'updated_at', 'role', 'is_superuser']
 
 class LoginSerializer(serializers.Serializer):
     """Serializer para login de usuários via API"""

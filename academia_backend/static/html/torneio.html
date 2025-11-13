@@ -9,425 +9,125 @@
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <link rel="stylesheet" href="{% static 'css/portal.css' %}">
   <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
-  <style>
-    .torneio-page {
-      max-width: 1400px;
-      margin: 0 auto;
-      padding: 2rem 1rem;
-    }
-    .torneio-header {
-      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-      color: white;
-      padding: 2rem;
-      border-radius: 12px;
-      margin-bottom: 2rem;
-    }
-    .torneio-header h1 {
-      margin: 0 0 0.5rem 0;
-      font-size: 2rem;
-    }
-    .torneio-stats {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 1rem;
-      margin-top: 1.5rem;
-    }
-    .stat-card {
-      background: rgba(255, 255, 255, 0.2);
-      padding: 1rem;
-      border-radius: 8px;
-      backdrop-filter: blur(10px);
-    }
-    .stat-card strong {
-      display: block;
-      font-size: 1.5rem;
-      margin-bottom: 0.25rem;
-    }
-    .chaves-container {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 2rem;
-      margin-top: 2rem;
-    }
-    .fase-section {
-      background: white;
-      border-radius: 12px;
-      padding: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-    .fase-title {
-      font-size: 1.25rem;
-      font-weight: bold;
-      margin-bottom: 1rem;
-      padding-bottom: 0.5rem;
-      border-bottom: 2px solid #f0f0f0;
-    }
-    .chave-item {
-      background: #f9f9f9;
-      border-radius: 8px;
-      padding: 1rem;
-      margin-bottom: 1rem;
-      border-left: 4px solid #667eea;
-    }
-    .chave-item.concluida {
-      border-left-color: #4CAF50;
-      background: #f1f8f4;
-    }
-    .chave-item.eliminado {
-      opacity: 0.6;
-      text-decoration: line-through;
-    }
-    .participante-nome {
-      padding: 0.5rem;
-      margin: 0.25rem 0;
-      border-radius: 4px;
-      background: white;
-    }
-    .participante-nome.vencedor {
-      background: #4CAF50;
-      color: white;
-      font-weight: bold;
-    }
-    .participante-nome.eliminado {
-      text-decoration: line-through;
-      opacity: 0.6;
-    }
-    .btn-inscrever {
-      margin-top: 1rem;
-    }
-    .exercicios-fase {
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid #e0e0e0;
-    }
-    .exercicio-item {
-      background: #f5f5f5;
-      padding: 0.75rem;
-      margin: 0.5rem 0;
-      border-radius: 6px;
-      font-size: 0.9rem;
-    }
-    .modal-overlay {
-      position: fixed;
-      top: 0;
-      left: 0;
-      right: 0;
-      bottom: 0;
-      background: rgba(0,0,0,0.5);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      z-index: 1000;
-    }
-    .modal {
-      background: white;
-      border-radius: 12px;
-      padding: 2rem;
-      max-width: 600px;
-      width: 90%;
-      max-height: 90vh;
-      overflow-y: auto;
-    }
-    .resultado-form {
-      display: grid;
-      gap: 1rem;
-    }
-    .resultado-form input,
-    .resultado-form textarea,
-    .resultado-form select {
-      padding: 0.75rem;
-      border: 1px solid #ddd;
-      border-radius: 6px;
-      font-family: inherit;
-      font-size: 1rem;
-      width: 100%;
-    }
-    .resultado-form label {
-      display: block;
-      margin-bottom: 0.5rem;
-      font-weight: 500;
-      color: #333;
-    }
-    .hidden {
-      display: none !important;
-    }
-    .torneio-card {
-      background: white;
-      border-radius: 12px;
-      padding: 1.5rem;
-      margin-bottom: 1.5rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      cursor: pointer;
-      transition: transform 0.2s, box-shadow 0.2s;
-    }
-    .torneio-card:hover {
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-    }
-    .torneio-card-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: start;
-      margin-bottom: 1rem;
-    }
-    .torneio-card-header h2 {
-      margin: 0;
-      color: #333;
-    }
-    .torneio-card-status {
-      padding: 0.5rem 1rem;
-      border-radius: 20px;
-      font-size: 0.85rem;
-      font-weight: bold;
-    }
-    .status-inscricoes_abertas {
-      background: #e3f2fd;
-      color: #1976d2;
-    }
-    .status-em_andamento {
-      background: #fff3e0;
-      color: #f57c00;
-    }
-    .status-finalizado {
-      background: #e8f5e9;
-      color: #388e3c;
-    }
-    .status-cancelado {
-      background: #ffebee;
-      color: #d32f2f;
-    }
-    .torneio-card-info {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-      padding-top: 1rem;
-      border-top: 1px solid #f0f0f0;
-    }
-    .info-item {
-      display: flex;
-      flex-direction: column;
-    }
-    .info-item strong {
-      color: #666;
-      font-size: 0.85rem;
-      margin-bottom: 0.25rem;
-    }
-    .info-item span {
-      color: #333;
-      font-size: 1.1rem;
-      font-weight: bold;
-    }
-    .page-header {
-      margin-bottom: 2rem;
-    }
-    .page-header h1 {
-      margin: 0 0 0.5rem 0;
-      color: #333;
-    }
-    /* Layout com Sidebar */
-    .layout-torneio {
-      display: flex;
-      min-height: 100vh;
-    }
-    .sidebar-torneio {
-      width: 250px;
-      background: #2c3e50;
-      color: white;
-      position: fixed;
-      left: 0;
-      top: 0;
-      height: 100vh;
-      overflow-y: auto;
-      z-index: 100;
-      transition: transform 0.3s;
-    }
-    .brand-sidebar {
-      padding: 1.5rem;
-      background: #1a252f;
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      font-weight: bold;
-      font-size: 1.1rem;
-    }
-    .brand-sidebar i {
-      font-size: 1.5rem;
-    }
-    .nav-sidebar {
-      padding: 1rem 0;
-    }
-    .nav-item {
-      display: flex;
-      align-items: center;
-      gap: 0.75rem;
-      padding: 0.75rem 1.5rem;
-      color: rgba(255,255,255,0.8);
-      text-decoration: none;
-      transition: all 0.2s;
-    }
-    .nav-item:hover {
-      background: rgba(255,255,255,0.1);
-      color: white;
-    }
-    .nav-item.active {
-      background: #3498db;
-      color: white;
-    }
-    .nav-item i {
-      width: 20px;
-      text-align: center;
-    }
-    .sidebar-footer {
-      position: absolute;
-      bottom: 0;
-      left: 0;
-      right: 0;
-      padding: 1rem;
-      border-top: 1px solid rgba(255,255,255,0.1);
-    }
-    .btn-sidebar {
-      display: flex;
-      align-items: center;
-      gap: 0.5rem;
-      width: 100%;
-      padding: 0.75rem;
-      background: rgba(255,255,255,0.1);
-      color: white;
-      text-decoration: none;
-      border-radius: 6px;
-      transition: background 0.2s;
-    }
-    .btn-sidebar:hover {
-      background: rgba(255,255,255,0.2);
-    }
-    .content-torneio {
-      flex: 1;
-      margin-left: 0;
-      transition: margin-left 0.3s;
-    }
-    .content-torneio.with-sidebar {
-      margin-left: 250px;
-    }
-    @media (max-width: 768px) {
-      .sidebar-torneio {
-        transform: translateX(-100%);
-      }
-      .sidebar-torneio.open {
-        transform: translateX(0);
-      }
-      .content-torneio.with-sidebar {
-        margin-left: 0;
-      }
-    }
-  </style>
+  <link rel="stylesheet" href="{% static 'css/torneio.css' %}">
 </head>
 <body>
-  <div class="layout-torneio">
+  <header class="portal-header">
+    <div class="brand"><i class="fa-solid fa-trophy"></i> AthleTech • Competição Interna</div>
+    <nav class="header-actions">
+      <a href="/" class="btn small">Início</a>
+      <div class="user-menu">
+        <span id="user-name" class="user-name">Carregando...</span>
+        <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="btn small alt">Sair</button>
+        </form>
+      </div>
+    </nav>
+  </header>
+
+  <div class="portal-layout">
     <!-- Sidebar para Admin -->
-    <aside id="sidebar-admin" class="sidebar-torneio" style="display: none;">
-      <div class="brand-sidebar">
-        <i class="fa-solid fa-trophy"></i>
-        <span>TORNEIOS</span>
-      </div>
-      <nav class="nav-sidebar">
-        <a href="#" class="nav-item active" onclick="navegarPara('lista', this); return false;">
-          <i class="fa-solid fa-list"></i> Lista de Torneios
-        </a>
-        <a href="#" class="nav-item" onclick="navegarPara('criar', this); return false;">
-          <i class="fa-solid fa-plus"></i> Criar Torneio
-        </a>
-        <a href="#" class="nav-item" onclick="navegarPara('gerenciar', this); return false;">
-          <i class="fa-solid fa-cog"></i> Gerenciar Torneios
-        </a>
-        <a href="#" class="nav-item" onclick="navegarPara('participantes', this); return false;">
-          <i class="fa-solid fa-users"></i> Participantes
-        </a>
-      </nav>
-      <div class="sidebar-footer">
-        <a href="/portal/" class="btn-sidebar">
-          <i class="fa-solid fa-arrow-left"></i> Voltar ao Portal
-        </a>
-      </div>
+    <aside id="sidebar-admin" class="sidebar" style="display: none;">
+      <a href="#" class="item active" onclick="navegarPara('lista', this); return false;">
+        <i class="fa-solid fa-list"></i> Lista de Torneios
+      </a>
+      <a href="#" class="item" onclick="navegarPara('criar', this); return false;">
+        <i class="fa-solid fa-plus"></i> Criar Torneio
+      </a>
+      <a href="#" class="item" onclick="navegarPara('gerenciar', this); return false;">
+        <i class="fa-solid fa-cog"></i> Gerenciar Torneios
+      </a>
+      <a href="#" class="item" onclick="navegarPara('participantes', this); return false;">
+        <i class="fa-solid fa-users"></i> Participantes
+      </a>
+      <a href="/portal/" class="item">
+        <i class="fa-solid fa-arrow-left"></i> Voltar ao Portal
+      </a>
     </aside>
 
     <!-- Conteúdo Principal -->
-    <main class="content-torneio">
-      <header class="portal-header">
-        <div class="brand"><i class="fa-solid fa-trophy"></i> AthleTech • Competição Interna</div>
-        <nav class="header-actions">
-          <button id="btn-toggle-sidebar" class="btn small" onclick="toggleSidebar()" style="display: none;">
-            <i class="fa-solid fa-bars"></i> Menu
-          </button>
-          <div class="user-menu">
-            <span id="user-name" class="user-name">Carregando...</span>
-            <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
-              {% csrf_token %}
-              <button type="submit" class="btn small alt">Sair</button>
-            </form>
+    <main class="content">
+      <!-- Tela Inicial: Lista de Torneios -->
+      <div id="tela-inicial">
+        <div class="card">
+          <div class="card-head">
+            <h2>Competições Internas</h2>
           </div>
-        </nav>
-      </header>
+          <p class="muted">Escolha um torneio para ver detalhes e chaves</p>
+        </div>
+        
+        <!-- Calendário de Próximas Competições -->
+        <div id="calendario-competicoes" class="card">
+          <div class="card-head">
+            <h2><i class="fa-solid fa-calendar-days"></i> Próximas Competições</h2>
+          </div>
+          <div id="calendario-content">
+            <p class="muted" style="text-align: center;">Carregando calendário...</p>
+          </div>
+        </div>
+        
+        <div id="torneio-loading" class="card">
+          <p class="muted" style="text-align: center;">Carregando torneios...</p>
+        </div>
 
-      <div class="torneio-page">
-    <!-- Tela Inicial: Lista de Torneios -->
-    <div id="tela-inicial">
-      <div class="page-header" style="margin-bottom: 2rem;">
-        <h1 style="margin: 0;">Competições Internas</h1>
-        <p style="color: #666; margin: 0.5rem 0 0 0;">Escolha um torneio para ver detalhes e chaves</p>
-      </div>
-      
-      <div id="torneio-loading" class="card">
-        <p style="text-align: center;">Carregando torneios...</p>
+        <div id="lista-torneios" style="display: none;">
+          <!-- Lista de torneios será inserida aqui -->
+        </div>
       </div>
 
-      <div id="lista-torneios" style="display: none;">
-        <!-- Lista de torneios será inserida aqui -->
+      <!-- Tela de Detalhes: Detalhes do Torneio Selecionado -->
+      <div id="tela-detalhes" style="display: none;">
+        <div class="card">
+          <div class="card-head">
+            <h2>Detalhes do Torneio</h2>
+            <button class="btn small outline" onclick="voltarParaLista()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+          </div>
+          <div id="detalhes-torneio">
+            <!-- Detalhes do torneio serão inseridos aqui -->
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Tela de Detalhes: Detalhes do Torneio Selecionado -->
-    <div id="tela-detalhes" style="display: none;">
-      <button class="btn outline" onclick="voltarParaLista()" style="margin-bottom: 1rem;">
-        <i class="fa-solid fa-arrow-left"></i> Voltar para Lista
-      </button>
-      <div id="detalhes-torneio">
-        <!-- Detalhes do torneio serão inseridos aqui -->
+      <!-- Tela de Criar Torneio (Admin) -->
+      <div id="tela-criar" style="display: none;">
+        <div class="card">
+          <div class="card-head">
+            <h2>Criar Novo Torneio</h2>
+          </div>
+          <p class="muted">Preencha os dados para criar uma nova competição</p>
+          <div id="form-criar-torneio">
+            <!-- Formulário será inserido aqui -->
+          </div>
+        </div>
       </div>
-    </div>
 
-    <!-- Tela de Criar Torneio (Admin) -->
-    <div id="tela-criar" style="display: none;">
-      <div class="page-header">
-        <h1>Criar Novo Torneio</h1>
-        <p>Preencha os dados para criar uma nova competição</p>
+      <!-- Tela de Gerenciar Torneios (Admin) -->
+      <div id="tela-gerenciar" style="display: none;">
+        <div class="card">
+          <div class="card-head">
+            <h2>Gerenciar Torneios</h2>
+          </div>
+          <p class="muted">Gerencie todos os torneios da academia</p>
+          <div id="lista-gerenciar-torneios">
+            <!-- Lista de gerenciamento será inserida aqui -->
+          </div>
+        </div>
       </div>
-      <div id="form-criar-torneio" class="card">
-        <!-- Formulário será inserido aqui -->
-      </div>
-    </div>
 
-    <!-- Tela de Gerenciar Torneios (Admin) -->
-    <div id="tela-gerenciar" style="display: none;">
-      <div class="page-header">
-        <h1>Gerenciar Torneios</h1>
-        <p>Gerencie todos os torneios da academia</p>
-      </div>
-      <div id="lista-gerenciar-torneios">
-        <!-- Lista de gerenciamento será inserida aqui -->
-      </div>
-    </div>
-
-    <!-- Tela de Participantes (Admin) -->
-    <div id="tela-participantes" style="display: none;">
-      <div class="page-header">
-        <h1>Participantes dos Torneios</h1>
-        <p>Visualize e gerencie participantes de todos os torneios</p>
-      </div>
-      <div id="lista-participantes">
-        <!-- Lista de participantes será inserida aqui -->
-      </div>
-    </div>
+      <!-- Tela de Participantes (Admin) -->
+      <div id="tela-participantes" style="display: none;">
+        <div class="card">
+          <div class="card-head">
+            <h2>Participantes dos Torneios</h2>
+          </div>
+          <p class="muted">Visualize e gerencie participantes de todos os torneios</p>
+          <div id="lista-participantes">
+            <!-- Lista de participantes será inserida aqui -->
+          </div>
+        </div>
       </div>
     </main>
   </div>
@@ -435,28 +135,30 @@
   <!-- Modal para resultado -->
   <div id="modal-resultado" class="modal-overlay hidden">
     <div class="modal">
-      <h2 id="modal-resultado-title">Registrar Resultado</h2>
+      <div class="card-head">
+        <h2>Registrar Resultado</h2>
+      </div>
       <form id="form-resultado" class="resultado-form">
-        <div>
+        <div class="field">
           <label>Pontos Participante 1</label>
           <input type="number" id="pontos-p1" min="0" required>
         </div>
-        <div>
+        <div class="field">
           <label>Pontos Participante 2</label>
           <input type="number" id="pontos-p2" min="0" required>
         </div>
-        <div>
+        <div class="field">
           <label>Vencedor</label>
           <select id="vencedor-select" required>
             <option value="">Selecione o vencedor</option>
           </select>
         </div>
-        <div>
+        <div class="field">
           <label>Observações</label>
           <textarea id="observacoes-resultado" rows="3"></textarea>
         </div>
         <div style="display: flex; gap: 1rem; margin-top: 1rem;">
-          <button type="submit" class="btn primary">Registrar</button>
+          <button type="submit" class="btn">Registrar</button>
           <button type="button" class="btn outline" onclick="closeModal('modal-resultado')">Cancelar</button>
         </div>
       </form>
@@ -465,6 +167,39 @@
 
   <script src="{% static 'js/torneio.js' %}"></script>
   <script src="{% static 'js/user-menu.js' %}"></script>
+  <script>
+    // Handler específico para logout na página de torneio
+    document.addEventListener('DOMContentLoaded', function() {
+      const logoutForm = document.querySelector('form[action*="logout"]');
+      if (logoutForm) {
+        logoutForm.addEventListener('submit', function(e) {
+          e.preventDefault();
+          
+          // Limpar todos os tokens JWT do localStorage
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user_data');
+          
+          // Limpar flags de redirecionamento
+          if (window.portalRedirectInProgress !== undefined) {
+            window.portalRedirectInProgress = false;
+          }
+          if (window.adminRedirectInProgress !== undefined) {
+            window.adminRedirectInProgress = false;
+          }
+          if (window.professorRedirectInProgress !== undefined) {
+            window.professorRedirectInProgress = false;
+          }
+          
+          console.log('Torneio: Tokens limpos, redirecionando para login');
+          
+          // Redirecionar diretamente para login
+          window.location.href = '/login/?message=logout_success';
+        });
+      }
+    });
+  </script>
 </body>
 </html>
-

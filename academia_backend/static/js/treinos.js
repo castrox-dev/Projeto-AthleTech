@@ -11,29 +11,44 @@ document.addEventListener('DOMContentLoaded', async function() {
   }
 
   async function authenticatedFetch(url, options = {}) {
+    const accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    if (!accessToken) {
+      window.location.href = '/login/?message=login_required&redirect=/treinos/';
+      return null;
+    }
+    
     const headers = Object.assign(
-      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${localStorage.getItem('access_token') || localStorage.getItem('accessToken')}` },
+      { 'Content-Type': 'application/json', 'Authorization': `Bearer ${accessToken}` },
       options.headers || {}
     );
     const res = await fetch(url, { ...options, headers });
     if (res.status === 401 && refreshToken) {
-      const r = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ refresh: refreshToken })
-      });
-      if (r.ok) {
-        const data = await r.json();
-        localStorage.setItem('access_token', data.access);
-        // retry once
-        return await fetch(url, { ...options, headers: { ...headers, 'Authorization': `Bearer ${data.access}` } });
-      } else {
-        localStorage.removeItem('access_token');
-        localStorage.removeItem('refresh_token');
-        localStorage.removeItem('accessToken');
-        localStorage.removeItem('refreshToken');
-        window.location.href = '/login/?message=session_expired&redirect=/treinos/';
-        return null;
+      try {
+        const r = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ refresh: refreshToken })
+        });
+        if (r.ok) {
+          const data = await r.json();
+          localStorage.setItem('access_token', data.access);
+          // retry once com novo token
+          const newHeaders = { ...headers, 'Authorization': `Bearer ${data.access}` };
+          return await fetch(url, { ...options, headers: newHeaders });
+        } else {
+          // Refresh token inválido ou expirado - fazer logout
+          localStorage.removeItem('access_token');
+          localStorage.removeItem('refresh_token');
+          localStorage.removeItem('accessToken');
+          localStorage.removeItem('refreshToken');
+          localStorage.removeItem('user_data');
+          window.location.href = '/login/?message=session_expired&redirect=/treinos/';
+          return null;
+        }
+      } catch (error) {
+        // Erro de rede ao tentar renovar - retornar erro para tratamento
+        console.error('Erro ao renovar token:', error);
+        return res;
       }
     }
     return res;

@@ -28,6 +28,9 @@ urlpatterns = [
     path('torneio/', TemplateView.as_view(template_name='html/torneio.html'), name='torneio'),
     path('robots.txt', static_serve, {'path': 'robots.txt', 'document_root': settings.STATIC_ROOT}),
     path('sitemap.xml', static_serve, {'path': 'sitemap.xml', 'document_root': settings.STATIC_ROOT}),
+    
+    # Rotas de teste para handlers de erro (apenas em DEBUG)
+    # Remover em produção ou proteger com autenticação
 ]
 
 # Servir arquivos estáticos e media em desenvolvimento
@@ -35,4 +38,10 @@ if settings.DEBUG:
     from django.contrib.staticfiles.urls import staticfiles_urlpatterns
     urlpatterns += staticfiles_urlpatterns()
     urlpatterns += static(settings.MEDIA_URL, document_root=settings.MEDIA_ROOT)
+
+# Handlers de erro (devem estar no final do arquivo)
+handler404 = 'academia.views.handler404'
+handler500 = 'academia.views.handler500'
+handler403 = 'academia.views.handler403'
+handler400 = 'academia.views.handler400'
 

@@ -32,6 +32,7 @@ body {
   background-color: white;
   box-shadow: rgba(0, 31, 84, 0.5) 0px 0px 0px 5px;
   border-radius: 12px;
+  padding: 30px 0;
 }
 .login-box form {
   width: 100%;

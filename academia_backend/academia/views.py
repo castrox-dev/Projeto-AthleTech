@@ -1,5 +1,7 @@
 from datetime import timedelta
+import os
 
+from django.conf import settings
 from django.contrib import messages
 from django.contrib.auth import authenticate, login, logout
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
@@ -88,12 +90,21 @@ class LoginView(APIView):
 
             # Gerar tokens JWT
             refresh = RefreshToken.for_user(user)
+            
+            # Obter URL de redirecionamento
+            dashboard_url_name = user.get_dashboard_url_name()
+            redirect_url = reverse(dashboard_url_name)
+            
+            # Log para debug (remover em produção se necessário)
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.info(f'Login - User: {user.email}, Role: {user.role}, Effective Role: {user.get_effective_role()}, Dashboard URL: {dashboard_url_name}, Redirect: {redirect_url}')
 
             return Response({
                 'user': UsuarioProfileSerializer(user).data,
                 'access': str(refresh.access_token),
                 'refresh': str(refresh),
-                'redirect_url': reverse(user.get_dashboard_url_name()),
+                'redirect_url': redirect_url,
                 'message': 'Login realizado com sucesso!'
             }, status=status.HTTP_200_OK)
 
@@ -197,7 +208,12 @@ class UsuarioViewSet(viewsets.ModelViewSet):
             # A verificação completa será feita no método destroy
             from rest_framework.permissions import IsAuthenticated
             return [IsAuthenticated()]
-        # Para outras ações, requer IsAcademiaAdmin
+        
+        # Para list/retrieve, permitir professores e admins verem usuários
+        if self.action in ['list', 'retrieve']:
+            return [IsProfessorOrAdmin()]
+        
+        # Para outras ações (create, update, etc), requer IsAcademiaAdmin
         return [IsAcademiaAdmin()]
     
     def create(self, request, *args, **kwargs):
@@ -479,34 +495,64 @@ class BaseRoleRequiredMixin(LoginRequiredMixin, UserPassesTestMixin):
         return user.get_effective_role() in self.allowed_roles
 
 
-class AdminDashboardPage(BaseRoleRequiredMixin, TemplateView):
+class AdminDashboardPage(TemplateView):
+    """Página do dashboard do admin - autenticação via JWT no frontend"""
     template_name = 'html/admin_dashboard.html'
-    allowed_roles = (Usuario.Role.ADMIN,)
+
+    def dispatch(self, request, *args, **kwargs):
+        # Se houver sessão Django autenticada, verificar role
+        # Mas não bloquear acesso se não houver sessão (autenticação via JWT no frontend)
+        if request.user.is_authenticated:
+            role = request.user.get_effective_role() if hasattr(request.user, 'get_effective_role') else Usuario.Role.ALUNO
+            
+            # Se não for admin ou superuser, redirecionar
+            if not (request.user.is_superuser or role == Usuario.Role.ADMIN):
+                if role == Usuario.Role.PROFESSOR:
+                    return redirect('portal_professor_dashboard')
+                return redirect('portal')
+
+        # Permitir acesso - autenticação será verificada no frontend via JWT
+        return super().dispatch(request, *args, **kwargs)
 
 
-class ProfessorDashboardPage(BaseRoleRequiredMixin, TemplateView):
+class ProfessorDashboardPage(TemplateView):
+    """Página do dashboard do professor - autenticação via JWT no frontend"""
     template_name = 'html/professor_dashboard.html'
-    allowed_roles = (
-        Usuario.Role.PROFESSOR,
-        Usuario.Role.ADMIN,
-    )
+
+    def dispatch(self, request, *args, **kwargs):
+        # Se houver sessão Django autenticada, verificar role
+        # Mas não bloquear acesso se não houver sessão (autenticação via JWT no frontend)
+        if request.user.is_authenticated:
+            role = request.user.get_effective_role() if hasattr(request.user, 'get_effective_role') else Usuario.Role.ALUNO
+            
+            # Se for admin, redirecionar para dashboard do admin
+            if request.user.is_superuser or role == Usuario.Role.ADMIN:
+                return redirect('portal_admin_dashboard')
+            
+            # Se não for professor ou admin, redirecionar
+            if role not in (Usuario.Role.PROFESSOR, Usuario.Role.ADMIN):
+                return redirect('portal')
+
+        # Permitir acesso - autenticação será verificada no frontend via JWT
+        return super().dispatch(request, *args, **kwargs)
 
 
-class AlunoPortalPage(LoginRequiredMixin, TemplateView):
+class AlunoPortalPage(TemplateView):
+    """Página do portal do aluno - autenticação via JWT no frontend"""
     template_name = 'html/portal_frontend.html'
 
     def dispatch(self, request, *args, **kwargs):
-        user = request.user
-        if not user.is_authenticated:
-            return super().dispatch(request, *args, **kwargs)
+        # Se houver sessão Django autenticada, verificar role e redirecionar se necessário
+        # Mas não bloquear acesso se não houver sessão (autenticação via JWT no frontend)
+        if request.user.is_authenticated:
+            role = request.user.get_effective_role() if hasattr(request.user, 'get_effective_role') else Usuario.Role.ALUNO
 
-        role = user.get_effective_role() if hasattr(user, 'get_effective_role') else Usuario.Role.ALUNO
+            if role == Usuario.Role.ADMIN:
+                return redirect('portal_admin_dashboard')
+            if role == Usuario.Role.PROFESSOR:
+                return redirect('portal_professor_dashboard')
 
-        if role == Usuario.Role.ADMIN:
-            return redirect('portal_admin_dashboard')
-        if role == Usuario.Role.PROFESSOR:
-            return redirect('portal_professor_dashboard')
-
+        # Permitir acesso - autenticação será verificada no frontend via JWT
         return super().dispatch(request, *args, **kwargs)
 
 class AvaliacaoListView(ListCreateAPIView):
@@ -688,6 +734,28 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+
+# ==================== HANDLERS DE ERRO ====================
+
+def handler404(request, exception):
+    """Handler para erro 404 - Página não encontrada"""
+    return render(request, 'html/404.html', {'exception': exception}, status=404)
+
+
+def handler500(request):
+    """Handler para erro 500 - Erro interno do servidor"""
+    return render(request, 'html/500.html', status=500)
+
+
+def handler403(request, exception):
+    """Handler para erro 403 - Acesso negado"""
+    return render(request, 'html/404.html', {'error_message': 'Acesso negado'}, status=403)
+
+
+def handler400(request, exception):
+    """Handler para erro 400 - Requisição inválida"""
+    return render(request, 'html/404.html', {'error_message': 'Requisição inválida'}, status=400)
 
 # ==================== VIEWS PARA TORNEIO ====================
 

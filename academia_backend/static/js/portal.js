@@ -1,4 +1,24 @@
 document.addEventListener('DOMContentLoaded', async function () {
+  // Não executar se estiver na página do admin ou professor
+  const currentPath = window.location.pathname;
+  if (currentPath.includes('/portal/admin/') || currentPath.includes('/portal/professor/')) {
+    console.log('Portal.js: Página do admin/professor detectada, não executando script do aluno');
+    return;
+  }
+
+  // Evitar múltiplas execuções
+  if (window.portalScriptExecuted) {
+    console.log('Portal.js: Script já foi executado, ignorando');
+    return;
+  }
+  window.portalScriptExecuted = true;
+  
+  // Verificar se há flag de redirecionamento em progresso
+  if (window.portalRedirectInProgress) {
+    console.log('Portal.js: Redirecionamento já em progresso, ignorando');
+    return;
+  }
+
   const API_BASE_URL = (window.API_CONFIG && window.API_CONFIG.API_BASE_URL) || '/api';
 
   const getAccessToken = () => localStorage.getItem('access_token') || localStorage.getItem('accessToken');
@@ -45,19 +65,79 @@ document.addEventListener('DOMContentLoaded', async function () {
         localStorage.removeItem('refreshToken');
       }
 
-      window.location.href = '/login/?message=login_required&redirect=/portal/';
+      // Limpar tokens antes de redirecionar
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user_data');
+      
+      // Redirecionar para login apenas se não estivermos já na página de login
+      if (!window.location.pathname.includes('/login/')) {
+        window.location.href = '/login/?message=login_required&redirect=/portal/';
+      }
       return null;
     }
 
     return res;
   }
 
+  // Verificar se há token antes de tentar carregar dados
+  const accessToken = getAccessToken();
+  if (!accessToken) {
+    console.warn('Sem token de acesso, redirecionando para login');
+    window.location.href = '/login/?message=login_required&redirect=/portal/';
+    return;
+  }
+
   // Load dashboard data
   try {
     const resp = await authenticatedFetch(`${API_BASE_URL}/dashboard/`);
-    if (!resp) return;
-    if (!resp.ok) throw new Error('Falha ao carregar dashboard');
+    if (!resp) {
+      // Se resp é null, authenticatedFetch já redirecionou
+      return;
+    }
+    if (!resp.ok) {
+      // Se não for 401, pode ser outro erro
+      if (resp.status === 401) {
+        // authenticatedFetch já deve ter tratado isso
+        return;
+      }
+      throw new Error('Falha ao carregar dashboard');
+    }
     const data = await resp.json();
+
+    // Verificar role do usuário e redirecionar se necessário
+    // Mas apenas se estiver na página do aluno (/portal/) e não for aluno
+    const currentPath = window.location.pathname;
+    const user = data.usuario || {};
+    const userRole = user.role;
+    const isSuperuser = user.is_superuser || false;
+    
+    // Só redirecionar se estiver na página do aluno (/portal/) e não for aluno
+    // E se não houver redirecionamento em progresso
+    if ((currentPath === '/portal/' || currentPath === '/portal') && !window.portalRedirectInProgress) {
+      // Se for admin ou superuser, redirecionar para dashboard do admin
+      if (userRole === 'admin' || isSuperuser) {
+        console.log('Portal.js: Usuário é admin na página do aluno, redirecionando para dashboard do admin');
+        window.portalRedirectInProgress = true;
+        // Usar setTimeout para evitar loops
+        setTimeout(() => {
+          window.location.replace('/portal/admin/');
+        }, 50);
+        return;
+      }
+      
+      // Se for professor, redirecionar para dashboard do professor
+      if (userRole === 'professor') {
+        console.log('Portal.js: Usuário é professor na página do aluno, redirecionando para dashboard do professor');
+        window.portalRedirectInProgress = true;
+        setTimeout(() => {
+          window.location.replace('/portal/professor/');
+        }, 50);
+        return;
+      }
+    }
 
     // Fill profile
     if (data.usuario) {

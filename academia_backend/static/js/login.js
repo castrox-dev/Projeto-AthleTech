@@ -1,25 +1,50 @@
 document.addEventListener('DOMContentLoaded', function() {
     const loginForm = document.getElementById('loginForm');
+    if (!loginForm) {
+        console.error('Formulário de login não encontrado');
+        return;
+    }
+    
     const emailField = document.getElementById('email');
     const passwordField = document.getElementById('password');
     const submitButton = loginForm.querySelector('button[type="submit"]');
     
-    // Adicionar validações aos campos
-    AuthUtils.addFieldValidation(
-        emailField,
-        AuthUtils.validateEmail,
-        'Por favor, insira um email válido'
-    );
+    if (!emailField || !passwordField || !submitButton) {
+        console.error('Campos do formulário não encontrados');
+        return;
+    }
     
-    AuthUtils.addFieldValidation(
-        passwordField,
-        (value) => value.length >= 6,
-        'A senha deve ter pelo menos 6 caracteres'
-    );
+    // Adicionar validações aos campos (se o método existir e os campos estiverem em form-group)
+    if (emailField && emailField.closest('.form-group') && typeof AuthUtils.addFieldValidation === 'function') {
+        try {
+            AuthUtils.addFieldValidation(
+                emailField,
+                AuthUtils.validateEmail,
+                'Por favor, insira um email válido'
+            );
+        } catch (e) {
+            console.warn('Erro ao adicionar validação de email:', e);
+        }
+    }
+    
+    if (passwordField && passwordField.closest('.form-group') && typeof AuthUtils.addFieldValidation === 'function') {
+        try {
+            AuthUtils.addFieldValidation(
+                passwordField,
+                (value) => value.length >= 6,
+                'A senha deve ter pelo menos 6 caracteres'
+            );
+        } catch (e) {
+            console.warn('Erro ao adicionar validação de senha:', e);
+        }
+    }
     
     // Manipular envio do formulário
     loginForm.addEventListener('submit', async function(e) {
         e.preventDefault();
+        
+        // Verificar se API_BASE_URL está definido
+        const API_BASE_URL = (window.API_CONFIG && window.API_CONFIG.API_BASE_URL) || '/api';
         
         const formData = new FormData(loginForm);
         const email = formData.get('email');
@@ -27,17 +52,26 @@ document.addEventListener('DOMContentLoaded', function() {
         const remember = formData.get('remember') === 'on';
         
         // Validar campos
+        if (!email || !email.trim()) {
+            AuthUtils.showMessage('Por favor, insira um email', 'error');
+            emailField.focus();
+            return;
+        }
+        
         if (!AuthUtils.validateEmail(email)) {
             AuthUtils.showMessage('Por favor, insira um email válido', 'error');
             emailField.focus();
             return;
         }
         
-        if (password.length < 6) {
+        if (!password || password.length < 6) {
             AuthUtils.showMessage('A senha deve ter pelo menos 6 caracteres', 'error');
             passwordField.focus();
             return;
         }
+        
+        // Marcar que login está em progresso para evitar redirecionamentos automáticos
+        sessionStorage.setItem('login_in_progress', 'true');
         
         // Mostrar loading
         AuthUtils.setLoading(submitButton, true);
@@ -50,29 +84,108 @@ document.addEventListener('DOMContentLoaded', function() {
                     'Content-Type': 'application/json'
                 },
                 body: JSON.stringify({
-                    email: email,
+                    email: email.trim(),
                     password: password
                 })
             });
             
-            const data = await response.json();
+            let data;
+            try {
+                data = await response.json();
+            } catch (jsonError) {
+                console.error('Erro ao parsear resposta JSON:', jsonError);
+                AuthUtils.showMessage('Erro na resposta do servidor. Tente novamente.', 'error');
+                AuthUtils.setLoading(submitButton, false);
+                return;
+            }
             
             if (response.ok) {
                 // Login bem-sucedido
-                AuthUtils.saveTokens(data.access, data.refresh);
+                if (data.access && data.refresh) {
+                    AuthUtils.saveTokens(data.access, data.refresh);
+                } else {
+                    console.error('Tokens não recebidos na resposta:', data);
+                    AuthUtils.showMessage('Erro: tokens não recebidos. Tente novamente.', 'error');
+                    AuthUtils.setLoading(submitButton, false);
+                    return;
+                }
                 
                 // Salvar dados do usuário se fornecidos
                 if (data.user) {
                     localStorage.setItem('user_data', JSON.stringify(data.user));
+                    console.log('Dados do usuário:', data.user);
+                    console.log('Role do usuário:', data.user.role);
                 }
                 
                 AuthUtils.showMessage('Login realizado com sucesso! Redirecionando...', 'success');
                 
-                // Redirecionar após 1 segundo
-                setTimeout(() => {
-                    const redirectTo = new URLSearchParams(window.location.search).get('redirect') || '/portal/';
-                    window.location.href = redirectTo;
-                }, 800);
+                // Redirecionar imediatamente (sem delay para evitar interferências)
+                // Usar redirect_url da resposta da API se disponível, caso contrário usar portal
+                let redirectTo = '/portal/';
+                
+                console.log('Dados completos da resposta:', data);
+                console.log('redirect_url recebido:', data.redirect_url);
+                console.log('Role do usuário:', data.user ? data.user.role : 'N/A');
+                console.log('Is superuser:', data.user ? data.user.is_superuser : 'N/A');
+                
+                // Verificar role do usuário para garantir redirecionamento correto
+                const userRole = data.user ? data.user.role : null;
+                const isSuperuser = data.user ? data.user.is_superuser : false;
+                
+                // Sempre usar redirect_url da API se disponível
+                if (data.redirect_url) {
+                    // redirect_url vem do Django reverse(), que retorna apenas o path (ex: /portal/admin/)
+                    redirectTo = String(data.redirect_url).trim();
+                    console.log('Usando redirect_url da API:', redirectTo);
+                    
+                    // Verificação adicional: se o redirect_url não corresponde ao role, corrigir
+                    if (userRole === 'professor' && !redirectTo.includes('/portal/professor/')) {
+                        console.warn('Login.js: redirect_url não corresponde ao role professor, corrigindo...');
+                        redirectTo = '/portal/professor/';
+                    } else if ((userRole === 'admin' || isSuperuser) && !redirectTo.includes('/portal/admin/')) {
+                        console.warn('Login.js: redirect_url não corresponde ao role admin, corrigindo...');
+                        redirectTo = '/portal/admin/';
+                    }
+                } else {
+                    // Se não houver redirect_url, determinar baseado no role do usuário
+                    if (userRole === 'admin' || isSuperuser) {
+                        redirectTo = '/portal/admin/';
+                        console.log('Usando redirecionamento baseado em role (admin):', redirectTo);
+                    } else if (userRole === 'professor') {
+                        redirectTo = '/portal/professor/';
+                        console.log('Usando redirecionamento baseado em role (professor):', redirectTo);
+                    } else {
+                        // Verificar parâmetro redirect na URL
+                        const urlRedirect = new URLSearchParams(window.location.search).get('redirect');
+                        if (urlRedirect) {
+                            redirectTo = urlRedirect.startsWith('/') ? urlRedirect : '/' + urlRedirect;
+                            console.log('Usando redirect da URL:', redirectTo);
+                        } else {
+                            // Fallback: sempre redirecionar para portal do aluno
+                            redirectTo = '/portal/';
+                            console.log('Usando fallback para portal do aluno');
+                        }
+                    }
+                }
+                
+                // Garantir que comece com /
+                if (!redirectTo.startsWith('/')) {
+                    redirectTo = '/' + redirectTo;
+                }
+                
+                // Garantir que termine com / se não tiver extensão
+                if (!redirectTo.match(/\.[a-z]+$/i) && !redirectTo.endsWith('/')) {
+                    redirectTo = redirectTo + '/';
+                }
+                
+                console.log('Redirecionando para:', redirectTo);
+                console.log('URL completa:', window.location.origin + redirectTo);
+                
+                // Limpar flag de login em progresso
+                sessionStorage.removeItem('login_in_progress');
+                
+                // Redirecionar imediatamente
+                window.location.href = redirectTo;
                 
             } else {
                 // Erro no login
@@ -80,22 +193,30 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 if (data.detail) {
                     errorMessage = data.detail;
-                } else if (data.non_field_errors) {
+                } else if (data.non_field_errors && Array.isArray(data.non_field_errors)) {
                     errorMessage = data.non_field_errors[0];
-                } else if (data.email) {
+                } else if (data.non_field_errors) {
+                    errorMessage = data.non_field_errors;
+                } else if (data.email && Array.isArray(data.email)) {
                     errorMessage = 'Email: ' + data.email[0];
-                } else if (data.password) {
+                } else if (data.password && Array.isArray(data.password)) {
                     errorMessage = 'Senha: ' + data.password[0];
+                } else if (typeof data === 'string') {
+                    errorMessage = data;
                 }
                 
                 AuthUtils.showMessage(errorMessage, 'error');
+                AuthUtils.setLoading(submitButton, false);
+                // Limpar flag de login em progresso em caso de erro
+                sessionStorage.removeItem('login_in_progress');
             }
             
         } catch (error) {
             console.error('Erro no login:', error);
-            AuthUtils.showMessage('Erro de conexão. Tente novamente.', 'error');
-        } finally {
+            AuthUtils.showMessage('Erro de conexão. Verifique sua internet e tente novamente.', 'error');
             AuthUtils.setLoading(submitButton, false);
+            // Limpar flag de login em progresso em caso de erro
+            sessionStorage.removeItem('login_in_progress');
         }
     });
     

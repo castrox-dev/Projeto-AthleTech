@@ -52,9 +52,11 @@ class Usuario(AbstractUser):
         super().save(*args, **kwargs)
 
     def get_dashboard_url_name(self):
-        if self.is_superuser or self.role == self.Role.ADMIN:
+        # Usar get_effective_role() para garantir o role correto
+        effective_role = self.get_effective_role()
+        if self.is_superuser or effective_role == self.Role.ADMIN:
             return 'portal_admin_dashboard'
-        if self.role == self.Role.PROFESSOR:
+        if effective_role == self.Role.PROFESSOR:
             return 'portal_professor_dashboard'
         return 'portal'
 

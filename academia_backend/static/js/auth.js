@@ -10,10 +10,30 @@ class AuthUtils {
             messageDiv.className = `message ${type}`;
             messageDiv.style.display = 'block';
             
-            // Auto-hide após 5 segundos
-            setTimeout(() => {
-                messageDiv.style.display = 'none';
-            }, 5000);
+            // Estilos baseados no tipo
+            messageDiv.style.color = '#fff';
+            messageDiv.style.fontWeight = '500';
+            
+            if (type === 'error') {
+                messageDiv.style.backgroundColor = '#dc3545';
+                messageDiv.style.border = '1px solid #c82333';
+            } else if (type === 'success') {
+                messageDiv.style.backgroundColor = '#28a745';
+                messageDiv.style.border = '1px solid #218838';
+            } else if (type === 'info') {
+                messageDiv.style.backgroundColor = '#17a2b8';
+                messageDiv.style.border = '1px solid #138496';
+            } else {
+                messageDiv.style.backgroundColor = '#6c757d';
+                messageDiv.style.border = '1px solid #5a6268';
+            }
+            
+            // Auto-hide após 5 segundos (apenas para success e info)
+            if (type === 'success' || type === 'info') {
+                setTimeout(() => {
+                    messageDiv.style.display = 'none';
+                }, 5000);
+            }
         }
     }
     
@@ -206,9 +226,13 @@ document.addEventListener('DOMContentLoaded', function() {
     });
     
     // Verificar se já está logado e redirecionar se necessário
-    if (AuthUtils.isLoggedIn() && (window.location.pathname.includes('/login/') || window.location.pathname.includes('/cadastro/'))) {
-        const redirectTo = new URLSearchParams(window.location.search).get('redirect') || '/';
-        window.location.href = redirectTo;
+    // Mas apenas se não estivermos no meio de um processo de login (evitar loops)
+    if (AuthUtils.isLoggedIn() && 
+        (window.location.pathname.includes('/login/') || window.location.pathname.includes('/cadastro/')) &&
+        !sessionStorage.getItem('login_in_progress')) {
+        const redirectTo = new URLSearchParams(window.location.search).get('redirect') || '/portal/';
+        // Usar replace para evitar adicionar ao histórico
+        window.location.replace(redirectTo);
     }
 });
 

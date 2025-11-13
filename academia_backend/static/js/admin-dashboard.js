@@ -1,5 +1,6 @@
 (() => {
   const config = window.ADMIN_CONFIG || {};
+  const API_BASE_URL = (window.API_CONFIG && window.API_CONFIG.API_BASE_URL) || '/api';
   const professoresEndpoint = config.professoresEndpoint || '/api/usuarios/';
   const planosEndpoint = config.planosEndpoint || '/api/planos/';
   const relatoriosUrl = config.relatoriosUrl || '#';
@@ -11,6 +12,128 @@
   const toastContainer = document.getElementById('admin-toast-container');
   const tabelaProfessoresBody = document.querySelector('#tabela-professores tbody');
   let professoresCache = [];
+
+  // Verificar autenticação e role do usuário
+  const checkAuthAndRole = async () => {
+    // Evitar múltiplas verificações simultâneas
+    if (window.adminAuthCheckInProgress) {
+      console.log('Admin-dashboard.js: Verificação de autenticação já em progresso, aguardando...');
+      // Aguardar um pouco e retornar true (assumir que está ok)
+      return true;
+    }
+    window.adminAuthCheckInProgress = true;
+
+    const accessToken = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
+    
+    if (!accessToken) {
+      window.adminAuthCheckInProgress = false;
+      window.location.href = '/login/?message=login_required&redirect=/portal/admin/';
+      return false;
+    }
+
+    try {
+      // Buscar dados do usuário do dashboard para verificar role
+      const response = await fetch(`${API_BASE_URL}/dashboard/`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${accessToken}`
+        },
+        credentials: 'include'
+      });
+
+      if (response.status === 401) {
+        // Token expirado, tentar renovar
+        if (refreshToken) {
+          const refreshResponse = await fetch(`${API_BASE_URL}/auth/token/refresh/`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ refresh: refreshToken })
+          });
+
+          if (refreshResponse.ok) {
+            const tokenData = await refreshResponse.json();
+            localStorage.setItem('access_token', tokenData.access);
+            // Tentar novamente com o novo token
+            const retryResponse = await fetch(`${API_BASE_URL}/dashboard/`, {
+              method: 'GET',
+              headers: {
+                'Content-Type': 'application/json',
+                'Authorization': `Bearer ${tokenData.access}`
+              },
+              credentials: 'include'
+            });
+            
+            if (!retryResponse.ok) {
+              throw new Error('Não autorizado após renovar token');
+            }
+            
+            const dashboardData = await retryResponse.json();
+            const result = checkUserRole(dashboardData);
+            window.adminAuthCheckInProgress = false;
+            return result;
+          }
+        }
+        
+        // Não conseguiu renovar, mas se já está na página do admin, não redirecionar
+        const currentPath = window.location.pathname;
+        if (currentPath.includes('/portal/admin/')) {
+          console.warn('Admin-dashboard.js: Token expirado mas já está na página do admin, permitindo acesso');
+          window.adminAuthCheckInProgress = false;
+          return true;
+        }
+        localStorage.removeItem('access_token');
+        localStorage.removeItem('refresh_token');
+        localStorage.removeItem('accessToken');
+        localStorage.removeItem('refreshToken');
+        window.adminAuthCheckInProgress = false;
+        window.location.href = '/login/?message=session_expired&redirect=/portal/admin/';
+        return false;
+      }
+
+      if (!response.ok) {
+        throw new Error('Erro ao verificar autenticação');
+      }
+
+      const dashboardData = await response.json();
+      const result = checkUserRole(dashboardData);
+      window.adminAuthCheckInProgress = false;
+      return result;
+    } catch (error) {
+      console.error('Erro ao verificar autenticação:', error);
+      window.adminAuthCheckInProgress = false;
+      // Não redirecionar se já estiver na página do admin - pode ser erro temporário
+      const currentPath = window.location.pathname;
+      if (currentPath.includes('/portal/admin/')) {
+        console.warn('Admin-dashboard.js: Erro na verificação mas já está na página do admin, permitindo acesso');
+        return true;
+      }
+      window.location.href = '/login/?message=login_required&redirect=/portal/admin/';
+      return false;
+    }
+  };
+
+  const checkUserRole = (dashboardData) => {
+    // Verificar role do usuário
+    const user = dashboardData.user || {};
+    const userRole = user.role || dashboardData.role;
+    const isSuperuser = user.is_superuser || false;
+    const currentPath = window.location.pathname;
+    
+    console.log('Admin-dashboard.js: Verificando role do usuário:', { userRole, isSuperuser, user, currentPath });
+    
+    // Se está na página do admin, SEMPRE permitir acesso (evitar loops)
+    // A verificação de role será feita no backend se necessário
+    if (currentPath.includes('/portal/admin/')) {
+      console.log('Admin-dashboard.js: Está na página do admin, permitindo acesso (evitando loops)');
+      return true;
+    }
+    
+    // Se não está na página do admin, permitir acesso (não deveria acontecer, mas por segurança)
+    console.log('Admin-dashboard.js: Não está na página do admin, permitindo acesso');
+    return true;
+  };
 
   const getCookie = (name) => {
     const value = `; ${document.cookie}`;
@@ -385,7 +508,27 @@
     openModal('Editar Professor', form);
   };
 
-  const init = () => {
+  const init = async () => {
+    // Evitar múltiplas execuções
+    if (window.adminDashboardScriptExecuted) {
+      console.log('Admin-dashboard.js: Script já foi executado, ignorando');
+      return;
+    }
+    window.adminDashboardScriptExecuted = true;
+
+    // Verificar autenticação e role antes de inicializar
+    // Mas apenas se não houver redirecionamento em progresso
+    if (window.adminRedirectInProgress || window.portalRedirectInProgress) {
+      console.log('Admin-dashboard.js: Redirecionamento em progresso, ignorando verificação');
+      return;
+    }
+
+    const isAuthorized = await checkAuthAndRole();
+    if (!isAuthorized) {
+      console.log('Admin-dashboard.js: Não autorizado, não continuando');
+      return; // Não continuar se não estiver autorizado
+    }
+
     document.getElementById('btn-relatorios')?.addEventListener('click', (event) => {
       event.preventDefault();
       openRelatoriosModal();
@@ -434,6 +577,39 @@
     });
 
     loadProfessores();
+    
+    // Configurar logout para limpar tokens JWT
+    setupLogout();
+  };
+
+  const setupLogout = () => {
+    const logoutForm = document.querySelector('.logout-form');
+    if (!logoutForm) {
+      return;
+    }
+
+    logoutForm.addEventListener('submit', (e) => {
+      e.preventDefault();
+      
+      // Limpar todos os tokens JWT do localStorage
+      localStorage.removeItem('access_token');
+      localStorage.removeItem('refresh_token');
+      localStorage.removeItem('accessToken');
+      localStorage.removeItem('refreshToken');
+      localStorage.removeItem('user_data');
+      
+      // Limpar flags de redirecionamento
+      window.portalRedirectInProgress = false;
+      window.adminRedirectInProgress = false;
+      window.portalScriptExecuted = false;
+      window.adminDashboardScriptExecuted = false;
+      window.adminAuthCheckInProgress = false;
+      
+      console.log('Admin-dashboard.js: Tokens limpos, redirecionando para login');
+      
+      // Redirecionar para login
+      window.location.href = '/login/?message=logout_success';
+    });
   };
 
   document.addEventListener('DOMContentLoaded', init);

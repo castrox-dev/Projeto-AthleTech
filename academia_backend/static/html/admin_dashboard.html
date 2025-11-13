@@ -23,6 +23,7 @@
         <a href="#matriculas"><i class="fa-solid fa-ticket"></i>Matrículas</a>
         <a href="#financeiro"><i class="fa-solid fa-coins"></i>Financeiro</a>
         <a href="#professores"><i class="fa-solid fa-chalkboard-teacher"></i>Professores</a>
+        <a href="{% url 'torneio' %}"><i class="fa-solid fa-trophy"></i>Torneio</a>
       </nav>
       <form method="POST" action="{% url 'logout' %}" class="logout-form">
         {% csrf_token %}
