@@ -10,6 +10,7 @@ from django.utils import timezone
 from django.views.decorators.http import require_POST
 from django.views.generic import TemplateView
 from rest_framework import permissions, status, viewsets
+from rest_framework.decorators import action
 from rest_framework.generics import ListAPIView, RetrieveAPIView, ListCreateAPIView
 from rest_framework.response import Response
 from rest_framework.views import APIView
@@ -26,6 +27,12 @@ from .models import (
     Avaliacao,
     Frequencia,
     Pedido,
+    Torneio,
+    ParticipanteTorneio,
+    FaseTorneio,
+    ExercicioFase,
+    Chave,
+    ResultadoPartida,
 )
 from .serializers import (
     UsuarioSerializer,
@@ -43,6 +50,12 @@ from .serializers import (
     DashboardSerializer,
     ChangePasswordSerializer,
     PedidoSerializer,
+    TorneioSerializer,
+    ParticipanteTorneioSerializer,
+    FaseTorneioSerializer,
+    ExercicioFaseSerializer,
+    ChaveSerializer,
+    ResultadoPartidaSerializer,
 )
 from .permissions import IsAcademiaAdmin, IsProfessorOrAdmin
 
@@ -148,10 +161,17 @@ class UsuarioViewSet(viewsets.ModelViewSet):
     
     queryset = Usuario.objects.all()
     serializer_class = UsuarioProfileSerializer
-    permission_classes = [IsAcademiaAdmin]
+    # Removido permission_classes - será controlado por get_permissions()
     
     def get_queryset(self):
         queryset = Usuario.objects.all()
+        
+        # Filtrar por role se fornecido
+        role = self.request.query_params.get('role', None)
+        if role:
+            queryset = queryset.filter(role=role)
+        
+        # Filtrar por busca
         search = self.request.query_params.get('search', None)
         if search:
             queryset = queryset.filter(
@@ -160,6 +180,153 @@ class UsuarioViewSet(viewsets.ModelViewSet):
                 Q(email__icontains=search)
             )
         return queryset
+    
+    def get_serializer_class(self):
+        """Retorna o serializer apropriado baseado na ação"""
+        # Para criação, usar UsuarioSerializer que permite definir role e senha
+        if self.action == 'create':
+            return UsuarioSerializer
+        # Para outras ações, usar UsuarioProfileSerializer
+        return UsuarioProfileSerializer
+    
+    def get_permissions(self):
+        """Retorna as permissões baseadas na ação"""
+        # Para DELETE, usar uma permissão mais permissiva que permite chegar ao método destroy
+        if self.action == 'destroy' or self.request.method == 'DELETE':
+            # Retornar uma permissão que apenas verifica autenticação
+            # A verificação completa será feita no método destroy
+            from rest_framework.permissions import IsAuthenticated
+            return [IsAuthenticated()]
+        # Para outras ações, requer IsAcademiaAdmin
+        return [IsAcademiaAdmin()]
+    
+    def create(self, request, *args, **kwargs):
+        """Método customizado para criar usuários"""
+        # Usar UsuarioSerializer para criação
+        serializer = UsuarioSerializer(data=request.data)
+        if serializer.is_valid():
+            user = serializer.save()
+            # Retornar usando UsuarioProfileSerializer para a resposta
+            return Response(
+                UsuarioProfileSerializer(user).data,
+                status=status.HTTP_201_CREATED
+            )
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+    def destroy(self, request, *args, **kwargs):
+        """Método customizado para deletar usuários"""
+        # Verificar permissão manualmente antes de prosseguir
+        user = request.user
+        
+        if not user or not user.is_authenticated:
+            return Response(
+                {'detail': 'Usuário não autenticado.'},
+                status=status.HTTP_401_UNAUTHORIZED
+            )
+        
+        # Verificar se é admin ou superuser
+        is_admin = False
+        if hasattr(user, 'is_superuser') and user.is_superuser:
+            is_admin = True
+        elif isinstance(user, Usuario):
+            effective_role = user.get_effective_role() if hasattr(user, 'get_effective_role') else getattr(user, 'role', None)
+            is_admin = effective_role == Usuario.Role.ADMIN
+        
+        if not is_admin:
+            return Response(
+                {'detail': f'Apenas administradores podem deletar usuários. Seu papel atual: {getattr(user, "role", "N/A") if isinstance(user, Usuario) else "N/A"}'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        instance = self.get_object()
+        
+        # Verificar se o usuário está tentando deletar a si mesmo
+        if instance == user:
+            return Response(
+                {'detail': 'Você não pode deletar sua própria conta.'},
+                status=status.HTTP_400_BAD_REQUEST
+            )
+        
+        # Verificar se é um superuser tentando deletar
+        if instance.is_superuser and not user.is_superuser:
+            return Response(
+                {'detail': 'Apenas superusuários podem deletar outros superusuários.'},
+                status=status.HTTP_403_FORBIDDEN
+            )
+        
+        # Verificar e deletar registros relacionados antes de deletar o usuário
+        # Isso evita erros de integridade de foreign key
+        from django.db import transaction, connection
+        
+        try:
+            with transaction.atomic():
+                # Deletar registros da tabela funcaousuario se existir
+                # Esta tabela pode existir no banco mas não estar no código atual
+                try:
+                    with connection.cursor() as cursor:
+                        # Verificar se a tabela existe e deletar registros relacionados
+                        cursor.execute("""
+                            SELECT EXISTS (
+                                SELECT FROM information_schema.tables 
+                                WHERE table_schema = 'public' 
+                                AND table_name = 'academia_funcaousuario'
+                            );
+                        """)
+                        table_exists = cursor.fetchone()[0]
+                        
+                        if table_exists:
+                            # Deletar registros da tabela funcaousuario relacionados ao usuário
+                            cursor.execute("""
+                                DELETE FROM academia_funcaousuario 
+                                WHERE usuario_id = %s
+                            """, [instance.id])
+                except Exception:
+                    # Continuar mesmo se não conseguir deletar dessa tabela
+                    pass
+                
+                # Deletar o usuário (isso vai deletar automaticamente os relacionados com CASCADE)
+                instance.delete()
+                
+                return Response(
+                    {'detail': 'Usuário deletado com sucesso.'},
+                    status=status.HTTP_204_NO_CONTENT
+                )
+        except Exception as e:
+            # Verificar se é erro de integridade de foreign key
+            error_str = str(e)
+            if 'foreign key' in error_str.lower() or 'IntegrityError' in str(type(e).__name__):
+                # Tentar identificar qual tabela está causando o problema
+                constraint_name = ''
+                if 'academia_funcaousuario' in error_str:
+                    constraint_name = 'funcaousuario'
+                elif 'academia_matricula' in error_str:
+                    constraint_name = 'matrícula'
+                elif 'academia_treino' in error_str:
+                    constraint_name = 'treino'
+                elif 'academia_avaliacao' in error_str:
+                    constraint_name = 'avaliação'
+                
+                detail_msg = 'Não é possível deletar este usuário porque ele possui registros relacionados.'
+                if constraint_name:
+                    detail_msg += f' Registro relacionado: {constraint_name}.'
+                detail_msg += ' Por favor, remova ou transfira esses registros antes de deletar o usuário.'
+                
+                return Response(
+                    {
+                        'detail': detail_msg,
+                        'error_type': 'foreign_key_constraint',
+                        'constraint': constraint_name if constraint_name else 'unknown'
+                    },
+                    status=status.HTTP_400_BAD_REQUEST
+                )
+            # Outros erros
+            return Response(
+                {
+                    'detail': f'Erro ao deletar usuário: {str(e)}',
+                    'error_type': 'unknown_error'
+                },
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR
+            )
 
 class PlanoViewSet(viewsets.ModelViewSet):
     """ViewSet para planos"""
@@ -521,3 +688,282 @@ def login_view(request):
 def logout_view(request):
     logout(request)
     return redirect('login')
+
+# ==================== VIEWS PARA TORNEIO ====================
+
+def gerar_chaves_torneio(torneio):
+    """Função auxiliar para gerar chaves do torneio automaticamente"""
+    from math import log2, ceil, floor
+    
+    participantes_ativos = list(torneio.participantes.filter(ativo=True, eliminado=False))
+    total_participantes = len(participantes_ativos)
+    
+    if total_participantes < 2:
+        return False, "É necessário pelo menos 2 participantes para gerar as chaves"
+    
+    # Determinar número de fases baseado no total de participantes
+    # Arredondar para cima para garantir que temos fases suficientes
+    num_fases = int(ceil(log2(total_participantes)))
+    
+    # Mapeamento de número de fase para tipo
+    fase_map = {
+        1: 'final',
+        2: 'semis',
+        3: 'quartas',
+        4: 'oitavas',
+    }
+    
+    # Limpar fases e chaves existentes se houver
+    torneio.fases.all().delete()
+    
+    # Criar fases do torneio (da última para a primeira)
+    for i in range(num_fases, 0, -1):
+        tipo_fase = fase_map.get(i, 'oitavas')
+        FaseTorneio.objects.create(
+            torneio=torneio,
+            tipo_fase=tipo_fase,
+            numero_fase=i
+        )
+    
+    # Embaralhar participantes para sorteio
+    import random
+    random.shuffle(participantes_ativos)
+    
+    # Criar chaves da primeira fase (oitavas ou a fase inicial)
+    primeira_fase = torneio.fases.order_by('numero_fase').last()  # Última fase criada (oitavas)
+    if not primeira_fase:
+        return False, "Erro ao criar primeira fase"
+    
+    # Calcular número de chaves na primeira fase
+    num_chaves_primeira_fase = 2 ** (num_fases - 1)
+    chave_num = 1
+    
+    # Criar chaves com participantes
+    for i in range(0, min(len(participantes_ativos), num_chaves_primeira_fase * 2), 2):
+        if i + 1 < len(participantes_ativos):
+            Chave.objects.create(
+                fase=primeira_fase,
+                participante1=participantes_ativos[i],
+                participante2=participantes_ativos[i + 1],
+                numero_chave=chave_num
+            )
+        else:
+            # Participante recebe bye (passa direto para próxima fase)
+            Chave.objects.create(
+                fase=primeira_fase,
+                participante1=participantes_ativos[i],
+                participante2=None,
+                numero_chave=chave_num
+            )
+        chave_num += 1
+    
+    # Criar chaves vazias para as próximas fases
+    for fase_num in range(num_fases - 1, 0, -1):
+        fase = torneio.fases.get(numero_fase=fase_num)
+        num_chaves_fase = 2 ** (fase_num - 1)
+        for chave_num in range(1, num_chaves_fase + 1):
+            Chave.objects.create(
+                fase=fase,
+                numero_chave=chave_num
+            )
+    
+    return True, f"Chaves geradas com sucesso! {chave_num - 1} chaves criadas na primeira fase."
+
+class TorneioViewSet(viewsets.ModelViewSet):
+    """ViewSet para torneios"""
+    
+    queryset = Torneio.objects.all()
+    serializer_class = TorneioSerializer
+    
+    def get_queryset(self):
+        queryset = Torneio.objects.all()
+        status_filter = self.request.query_params.get('status', None)
+        if status_filter:
+            queryset = queryset.filter(status=status_filter)
+        return queryset.prefetch_related('participantes', 'fases', 'fases__chaves', 'fases__exercicios')
+    
+    def get_permissions(self):
+        """Permissões baseadas na ação"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            # Apenas admins podem criar/editar/deletar torneios
+            return [IsAcademiaAdmin()]
+        # Todos autenticados podem listar e ver detalhes
+        return [permissions.IsAuthenticated()]
+    
+    def get_serializer_context(self):
+        """Adicionar request ao contexto do serializer"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
+    def perform_create(self, serializer):
+        """Salvar criador do torneio"""
+        serializer.save(criado_por=self.request.user)
+    
+    @action(detail=True, methods=['post'], permission_classes=[IsAcademiaAdmin])
+    def gerar_chaves(self, request, pk=None):
+        """Ação para gerar chaves do torneio"""
+        torneio = self.get_object()
+        sucesso, mensagem = gerar_chaves_torneio(torneio)
+        
+        if sucesso:
+            return Response({'message': mensagem}, status=status.HTTP_200_OK)
+        return Response({'error': mensagem}, status=status.HTTP_400_BAD_REQUEST)
+
+class ParticipanteTorneioViewSet(viewsets.ModelViewSet):
+    """ViewSet para participantes do torneio"""
+    
+    queryset = ParticipanteTorneio.objects.all()
+    serializer_class = ParticipanteTorneioSerializer
+    
+    def get_queryset(self):
+        queryset = ParticipanteTorneio.objects.all()
+        torneio_id = self.request.query_params.get('torneio', None)
+        if torneio_id:
+            queryset = queryset.filter(torneio_id=torneio_id)
+        return queryset.select_related('usuario', 'torneio')
+    
+    def get_permissions(self):
+        """Permissões baseadas na ação"""
+        if self.action == 'create':
+            # Alunos podem se inscrever, admins podem adicionar qualquer um
+            return [permissions.IsAuthenticated()]
+        elif self.action in ['update', 'partial_update', 'destroy']:
+            # Apenas admins podem editar/deletar participantes
+            return [IsAcademiaAdmin()]
+        # Todos podem listar e ver
+        return [permissions.IsAuthenticated()]
+    
+    def perform_create(self, serializer):
+        """Criar participante - se for aluno, só pode se inscrever"""
+        user = self.request.user
+        torneio = serializer.validated_data['torneio']
+        
+        # Verificar se é admin ou se está se inscrevendo
+        if user.get_effective_role() != Usuario.Role.ADMIN:
+            # Aluno só pode se inscrever a si mesmo
+            if serializer.validated_data.get('usuario') != user:
+                raise PermissionDenied('Você só pode se inscrever no torneio.')
+            
+            # Verificar se já está inscrito
+            if ParticipanteTorneio.objects.filter(torneio=torneio, usuario=user, ativo=True).exists():
+                raise ValidationError('Você já está inscrito neste torneio.')
+            
+            # Verificar se há vagas
+            if torneio.vagas_disponiveis <= 0:
+                raise ValidationError('Não há vagas disponíveis neste torneio.')
+            
+            # Verificar se as inscrições estão abertas
+            agora = timezone.now()
+            if agora < torneio.data_inicio_inscricoes or agora > torneio.data_fim_inscricoes:
+                raise ValidationError('As inscrições para este torneio não estão abertas no momento.')
+        
+        serializer.save()
+
+class FaseTorneioViewSet(viewsets.ModelViewSet):
+    """ViewSet para fases do torneio"""
+    
+    queryset = FaseTorneio.objects.all()
+    serializer_class = FaseTorneioSerializer
+    
+    def get_queryset(self):
+        queryset = FaseTorneio.objects.all()
+        torneio_id = self.request.query_params.get('torneio', None)
+        if torneio_id:
+            queryset = queryset.filter(torneio_id=torneio_id)
+        return queryset.prefetch_related('exercicios', 'chaves', 'chaves__participante1', 'chaves__participante2')
+    
+    def get_permissions(self):
+        """Apenas admins e professores podem gerenciar fases"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsProfessorOrAdmin()]
+        return [permissions.IsAuthenticated()]
+
+class ExercicioFaseViewSet(viewsets.ModelViewSet):
+    """ViewSet para exercícios de uma fase"""
+    
+    queryset = ExercicioFase.objects.all()
+    serializer_class = ExercicioFaseSerializer
+    
+    def get_queryset(self):
+        queryset = ExercicioFase.objects.all()
+        fase_id = self.request.query_params.get('fase', None)
+        if fase_id:
+            queryset = queryset.filter(fase_id=fase_id)
+        return queryset.select_related('exercicio', 'fase')
+    
+    def get_permissions(self):
+        """Apenas admins e professores podem gerenciar exercícios das fases"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsProfessorOrAdmin()]
+        return [permissions.IsAuthenticated()]
+
+class ChaveViewSet(viewsets.ModelViewSet):
+    """ViewSet para chaves do torneio"""
+    
+    queryset = Chave.objects.all()
+    serializer_class = ChaveSerializer
+    
+    def get_queryset(self):
+        queryset = Chave.objects.all()
+        fase_id = self.request.query_params.get('fase', None)
+        if fase_id:
+            queryset = queryset.filter(fase_id=fase_id)
+        return queryset.select_related('participante1', 'participante2', 'vencedor', 'fase')
+    
+    def get_permissions(self):
+        """Apenas admins e professores podem editar chaves, todos podem ver"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsProfessorOrAdmin()]
+        return [permissions.IsAuthenticated()]
+
+class ResultadoPartidaViewSet(viewsets.ModelViewSet):
+    """ViewSet para resultados das partidas"""
+    
+    queryset = ResultadoPartida.objects.all()
+    serializer_class = ResultadoPartidaSerializer
+    
+    def get_queryset(self):
+        queryset = ResultadoPartida.objects.all()
+        chave_id = self.request.query_params.get('chave', None)
+        if chave_id:
+            queryset = queryset.filter(chave_id=chave_id)
+        return queryset.select_related('chave', 'vencedor', 'registrado_por')
+    
+    def get_permissions(self):
+        """Apenas admins e professores podem registrar resultados"""
+        if self.action in ['create', 'update', 'partial_update', 'destroy']:
+            return [IsProfessorOrAdmin()]
+        return [permissions.IsAuthenticated()]
+    
+    def perform_create(self, serializer):
+        """Salvar quem registrou o resultado e atualizar próximas fases"""
+        resultado = serializer.save(registrado_por=self.request.user)
+        
+        # Atualizar próxima fase se necessário
+        chave = resultado.chave
+        vencedor = resultado.vencedor
+        
+        if vencedor and chave.fase:
+            # Verificar se há próxima fase (número menor = fase mais avançada)
+            proxima_fase = chave.fase.torneio.fases.filter(
+                numero_fase=chave.fase.numero_fase - 1
+            ).first()
+            
+            if proxima_fase:
+                # Calcular qual chave na próxima fase baseado na chave atual
+                # Chave 1 e 2 vão para chave 1, chave 3 e 4 vão para chave 2, etc.
+                chave_num_proxima = (chave.numero_chave + 1) // 2
+                proxima_chave = proxima_fase.chaves.filter(
+                    numero_chave=chave_num_proxima
+                ).first()
+                
+                if proxima_chave:
+                    # Adicionar vencedor à próxima chave
+                    # Se número da chave atual é ímpar, vai para participante1
+                    # Se é par, vai para participante2
+                    if chave.numero_chave % 2 == 1:
+                        proxima_chave.participante1 = vencedor
+                    else:
+                        proxima_chave.participante2 = vencedor
+                    proxima_chave.save()

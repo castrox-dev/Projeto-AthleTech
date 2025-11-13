@@ -13,6 +13,12 @@ router.register(r'planos', views.PlanoViewSet)
 router.register(r'usuarios', views.UsuarioViewSet)
 router.register(r'matriculas', views.MatriculaViewSet, basename='matricula')
 router.register(r'treinos/gerenciar', views.TreinoManageViewSet, basename='treino-gerenciar')
+router.register(r'torneios', views.TorneioViewSet, basename='torneio')
+router.register(r'participantes-torneio', views.ParticipanteTorneioViewSet, basename='participante-torneio')
+router.register(r'fases-torneio', views.FaseTorneioViewSet, basename='fase-torneio')
+router.register(r'exercicios-fase', views.ExercicioFaseViewSet, basename='exercicio-fase')
+router.register(r'chaves', views.ChaveViewSet, basename='chave')
+router.register(r'resultados-partida', views.ResultadoPartidaViewSet, basename='resultado-partida')
 
 urlpatterns = [
     # URLs do router

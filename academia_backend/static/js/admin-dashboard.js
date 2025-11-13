@@ -37,6 +37,9 @@
   };
 
   const apiRequest = async (url, { method = 'GET', body, headers = {}, expectJSON = true } = {}) => {
+    // Obter token JWT do localStorage
+    const token = localStorage.getItem('access_token') || localStorage.getItem('accessToken');
+    
     const opts = {
       method,
       headers: {
@@ -45,6 +48,11 @@
       },
       credentials: 'include',
     };
+
+    // Adicionar token JWT no header Authorization se disponível
+    if (token) {
+      opts.headers['Authorization'] = `Bearer ${token}`;
+    }
 
     if (body) {
       opts.body = typeof body === 'string' ? body : JSON.stringify(body);
@@ -55,7 +63,42 @@
       }
     }
 
-    const response = await fetch(url, opts);
+    let response = await fetch(url, opts);
+    
+    // Se receber 401 (não autorizado), tentar renovar o token
+    if (response.status === 401) {
+      const refreshToken = localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
+      if (refreshToken) {
+        try {
+          const refreshResponse = await fetch('/api/auth/token/refresh/', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ refresh: refreshToken }),
+          });
+          
+          if (refreshResponse.ok) {
+            const tokenData = await refreshResponse.json();
+            localStorage.setItem('access_token', tokenData.access);
+            // Tentar novamente com o novo token
+            opts.headers['Authorization'] = `Bearer ${tokenData.access}`;
+            response = await fetch(url, opts);
+          } else {
+            // Se não conseguir renovar, limpar tokens e redirecionar para login
+            localStorage.removeItem('access_token');
+            localStorage.removeItem('accessToken');
+            localStorage.removeItem('refresh_token');
+            localStorage.removeItem('refreshToken');
+            window.location.href = '/login/?message=session_expired';
+            return;
+          }
+        } catch (err) {
+          console.error('Erro ao renovar token:', err);
+        }
+      }
+    }
+    
     if (!response.ok) {
       let errorDetail = 'Erro inesperado';
       try {
@@ -243,13 +286,17 @@
       event.preventDefault();
       const formData = new FormData(form);
       const tempPassword = Math.random().toString(36).slice(-10);
+      const nomeCompleto = formData.get('nome').trim();
+      const partesNome = nomeCompleto.split(' ');
+      const firstName = partesNome[0] || '';
+      const lastName = partesNome.slice(1).join(' ') || '';
+      
       const payload = {
         email: formData.get('email'),
-        first_name: formData.get('nome'),
+        first_name: firstName,
+        last_name: lastName,
         phone: formData.get('telefone'),
         role: 'professor',
-        especialidade: formData.get('especialidade'),
-        cref: formData.get('cref') || '',
         password: tempPassword,
         password_confirm: tempPassword,
       };

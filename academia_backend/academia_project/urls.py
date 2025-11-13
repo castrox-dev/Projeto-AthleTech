@@ -25,6 +25,7 @@ urlpatterns = [
     path('planos/', TemplateView.as_view(template_name='html/planos_frontend.html'), name='planos'),
     path('cadastro/', TemplateView.as_view(template_name='html/cadastro_frontend.html'), name='cadastro'),
     path('checkout/', TemplateView.as_view(template_name='html/checkout_frontend.html'), name='checkout'),
+    path('torneio/', TemplateView.as_view(template_name='html/torneio.html'), name='torneio'),
     path('robots.txt', static_serve, {'path': 'robots.txt', 'document_root': settings.STATIC_ROOT}),
     path('sitemap.xml', static_serve, {'path': 'sitemap.xml', 'document_root': settings.STATIC_ROOT}),
 ]

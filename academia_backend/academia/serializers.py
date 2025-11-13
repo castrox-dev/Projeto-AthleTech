@@ -1,6 +1,10 @@
 from rest_framework import serializers
 from django.contrib.auth import authenticate
-from .models import Usuario, Plano, Matricula, Exercicio, Treino, TreinoExercicio, Avaliacao, Frequencia, Pedido
+from .models import (
+    Usuario, Plano, Matricula, Exercicio, Treino, TreinoExercicio, 
+    Avaliacao, Frequencia, Pedido, Torneio, ParticipanteTorneio, 
+    FaseTorneio, ExercicioFase, Chave, ResultadoPartida
+)
 
 class UsuarioSerializer(serializers.ModelSerializer):
     password = serializers.CharField(write_only=True, min_length=8)
@@ -17,7 +21,7 @@ class UsuarioSerializer(serializers.ModelSerializer):
             'password': {'write_only': True},
             'created_at': {'read_only': True},
             'is_active_member': {'read_only': True},
-            'role': {'read_only': True},
+            # role não é read_only para permitir que admins definam o role na criação
         }
 
     def validate_email(self, value):
@@ -250,3 +254,103 @@ class PedidoSerializer(serializers.ModelSerializer):
         model = Pedido
         fields = ['id', 'id_publico', 'usuario', 'plano', 'plano_nome', 'valor', 'metodo', 'status', 'pix_payload', 'pix_qr', 'criado_em']
         read_only_fields = ['id', 'id_publico', 'status', 'pix_payload', 'pix_qr', 'criado_em', 'usuario', 'valor']
+
+# Serializers para Torneio
+class ParticipanteTorneioSerializer(serializers.ModelSerializer):
+    """Serializer para participantes do torneio"""
+    usuario_nome = serializers.CharField(source='usuario.get_full_name', read_only=True)
+    usuario_email = serializers.CharField(source='usuario.email', read_only=True)
+    usuario_id = serializers.IntegerField(source='usuario.id', read_only=True)
+    
+    class Meta:
+        model = ParticipanteTorneio
+        fields = ['id', 'torneio', 'usuario', 'usuario_id', 'usuario_nome', 'usuario_email', 
+                  'data_inscricao', 'ativo', 'eliminado', 'posicao_final', 'observacoes']
+        read_only_fields = ['id', 'data_inscricao']
+
+class ExercicioFaseSerializer(serializers.ModelSerializer):
+    """Serializer para exercícios de uma fase"""
+    exercicio_nome = serializers.CharField(source='exercicio.nome', read_only=True)
+    exercicio_categoria = serializers.CharField(source='exercicio.categoria', read_only=True)
+    exercicio_id = serializers.IntegerField(source='exercicio.id', read_only=True)
+    
+    class Meta:
+        model = ExercicioFase
+        fields = ['id', 'fase', 'exercicio', 'exercicio_id', 'exercicio_nome', 'exercicio_categoria',
+                  'ordem', 'series', 'repeticoes', 'peso_minimo', 'peso_maximo', 'tempo_limite',
+                  'criterio_vitoria', 'pontos', 'created_at']
+        read_only_fields = ['id', 'created_at']
+
+class ChaveSerializer(serializers.ModelSerializer):
+    """Serializer para chaves do torneio"""
+    participante1_nome = serializers.CharField(source='participante1.usuario.get_full_name', read_only=True)
+    participante2_nome = serializers.CharField(source='participante2.usuario.get_full_name', read_only=True)
+    vencedor_nome = serializers.CharField(source='vencedor.usuario.get_full_name', read_only=True)
+    fase_nome = serializers.CharField(source='fase.get_tipo_fase_display', read_only=True)
+    tem_resultado = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Chave
+        fields = ['id', 'fase', 'fase_nome', 'participante1', 'participante1_nome',
+                  'participante2', 'participante2_nome', 'numero_chave', 'vencedor', 
+                  'vencedor_nome', 'data_partida', 'concluida', 'observacoes', 
+                  'tem_resultado', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at']
+    
+    def get_tem_resultado(self, obj):
+        return hasattr(obj, 'resultado')
+
+class ResultadoPartidaSerializer(serializers.ModelSerializer):
+    """Serializer para resultados das partidas"""
+    chave_info = ChaveSerializer(source='chave', read_only=True)
+    vencedor_nome = serializers.CharField(source='vencedor.usuario.get_full_name', read_only=True)
+    registrado_por_nome = serializers.CharField(source='registrado_por.get_full_name', read_only=True)
+    
+    class Meta:
+        model = ResultadoPartida
+        fields = ['id', 'chave', 'chave_info', 'participante1_pontos', 'participante2_pontos',
+                  'vencedor', 'vencedor_nome', 'detalhes', 'observacoes', 'registrado_por',
+                  'registrado_por_nome', 'data_registro']
+        read_only_fields = ['id', 'data_registro']
+
+class FaseTorneioSerializer(serializers.ModelSerializer):
+    """Serializer para fases do torneio"""
+    exercicios = ExercicioFaseSerializer(many=True, read_only=True)
+    chaves = ChaveSerializer(many=True, read_only=True)
+    total_chaves = serializers.SerializerMethodField()
+    chaves_concluidas = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = FaseTorneio
+        fields = ['id', 'torneio', 'tipo_fase', 'numero_fase', 'data_inicio', 'data_fim',
+                  'concluida', 'exercicios', 'chaves', 'total_chaves', 'chaves_concluidas', 'created_at']
+        read_only_fields = ['id', 'created_at']
+    
+    def get_total_chaves(self, obj):
+        return obj.chaves.count()
+    
+    def get_chaves_concluidas(self, obj):
+        return obj.chaves.filter(concluida=True).count()
+
+class TorneioSerializer(serializers.ModelSerializer):
+    """Serializer para torneios"""
+    criado_por_nome = serializers.CharField(source='criado_por.get_full_name', read_only=True)
+    total_participantes = serializers.IntegerField(read_only=True)
+    vagas_disponiveis = serializers.IntegerField(read_only=True)
+    participantes = ParticipanteTorneioSerializer(many=True, read_only=True)
+    fases = FaseTorneioSerializer(many=True, read_only=True)
+    usuario_inscrito = serializers.SerializerMethodField()
+    
+    class Meta:
+        model = Torneio
+        fields = ['id', 'nome', 'descricao', 'data_inicio_inscricoes', 'data_fim_inscricoes',
+                  'data_inicio', 'data_fim', 'status', 'max_participantes', 'total_participantes',
+                  'vagas_disponiveis', 'regras', 'premio', 'criado_por', 'criado_por_nome',
+                  'participantes', 'fases', 'usuario_inscrito', 'created_at', 'updated_at']
+        read_only_fields = ['id', 'created_at', 'updated_at', 'total_participantes', 'vagas_disponiveis']
+    
+    def get_usuario_inscrito(self, obj):
+        request = self.context.get('request')
+        if request and request.user.is_authenticated:
+            return obj.participantes.filter(usuario=request.user, ativo=True).exists()
+        return False

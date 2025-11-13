@@ -269,3 +269,199 @@ class Pedido(models.Model):
 
     def __str__(self):
         return f"Pedido {self.id_publico} - {self.usuario} - {self.plano} - {self.status}"
+
+class Torneio(models.Model):
+    """Modelo para torneios/competições internas da academia"""
+    
+    STATUS_CHOICES = [
+        ('inscricoes_abertas', 'Inscrições Abertas'),
+        ('em_andamento', 'Em Andamento'),
+        ('finalizado', 'Finalizado'),
+        ('cancelado', 'Cancelado'),
+    ]
+    
+    nome = models.CharField('Nome do Torneio', max_length=200)
+    descricao = models.TextField('Descrição')
+    data_inicio_inscricoes = models.DateTimeField('Data de Início das Inscrições')
+    data_fim_inscricoes = models.DateTimeField('Data de Fim das Inscrições')
+    data_inicio = models.DateTimeField('Data de Início do Torneio')
+    data_fim = models.DateTimeField('Data de Fim do Torneio', blank=True, null=True)
+    status = models.CharField('Status', max_length=20, choices=STATUS_CHOICES, default='inscricoes_abertas')
+    max_participantes = models.IntegerField('Máximo de Participantes', default=16)
+    regras = models.TextField('Regras do Torneio', blank=True)
+    premio = models.TextField('Prêmio', blank=True)
+    criado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, related_name='torneios_criados')
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Torneio'
+        verbose_name_plural = 'Torneios'
+        ordering = ['-created_at']
+    
+    def __str__(self):
+        return f"{self.nome} - {self.get_status_display()}"
+    
+    @property
+    def total_participantes(self):
+        return self.participantes.filter(ativo=True).count()
+    
+    @property
+    def vagas_disponiveis(self):
+        return max(0, self.max_participantes - self.total_participantes)
+
+class ParticipanteTorneio(models.Model):
+    """Modelo para participantes de um torneio"""
+    
+    torneio = models.ForeignKey(Torneio, on_delete=models.CASCADE, related_name='participantes')
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE, related_name='participacoes_torneios')
+    data_inscricao = models.DateTimeField('Data de Inscrição', auto_now_add=True)
+    ativo = models.BooleanField('Ativo', default=True)
+    eliminado = models.BooleanField('Eliminado', default=False)
+    posicao_final = models.IntegerField('Posição Final', blank=True, null=True)
+    observacoes = models.TextField('Observações', blank=True)
+    
+    class Meta:
+        verbose_name = 'Participante do Torneio'
+        verbose_name_plural = 'Participantes do Torneio'
+        unique_together = ['torneio', 'usuario']
+        ordering = ['data_inscricao']
+    
+    def __str__(self):
+        return f"{self.usuario} - {self.torneio}"
+
+class FaseTorneio(models.Model):
+    """Modelo para fases do torneio (oitavas, quartas, semis, final)"""
+    
+    TIPO_FASE_CHOICES = [
+        ('oitavas', 'Oitavas de Final'),
+        ('quartas', 'Quartas de Final'),
+        ('semis', 'Semi-Final'),
+        ('final', 'Final'),
+        ('terceiro_lugar', 'Disputa de 3º Lugar'),
+    ]
+    
+    torneio = models.ForeignKey(Torneio, on_delete=models.CASCADE, related_name='fases')
+    tipo_fase = models.CharField('Tipo de Fase', max_length=20, choices=TIPO_FASE_CHOICES)
+    numero_fase = models.IntegerField('Número da Fase', default=1)
+    data_inicio = models.DateTimeField('Data de Início', blank=True, null=True)
+    data_fim = models.DateTimeField('Data de Fim', blank=True, null=True)
+    concluida = models.BooleanField('Concluída', default=False)
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Fase do Torneio'
+        verbose_name_plural = 'Fases do Torneio'
+        ordering = ['torneio', 'numero_fase']
+        unique_together = ['torneio', 'tipo_fase']
+    
+    def __str__(self):
+        return f"{self.torneio} - {self.get_tipo_fase_display()}"
+
+class ExercicioFase(models.Model):
+    """Modelo para exercícios de cada fase do torneio"""
+    
+    fase = models.ForeignKey(FaseTorneio, on_delete=models.CASCADE, related_name='exercicios')
+    exercicio = models.ForeignKey(Exercicio, on_delete=models.CASCADE, related_name='fases_torneio')
+    ordem = models.IntegerField('Ordem', default=1)
+    series = models.IntegerField('Séries', validators=[MinValueValidator(1)], default=3)
+    repeticoes = models.IntegerField('Repetições', validators=[MinValueValidator(1)], default=10)
+    peso_minimo = models.DecimalField('Peso Mínimo (kg)', max_digits=5, decimal_places=2, blank=True, null=True)
+    peso_maximo = models.DecimalField('Peso Máximo (kg)', max_digits=5, decimal_places=2, blank=True, null=True)
+    tempo_limite = models.IntegerField('Tempo Limite (segundos)', blank=True, null=True)
+    criterio_vitoria = models.CharField('Critério de Vitória', max_length=100, blank=True, 
+                                       help_text='Ex: Maior número de repetições, Menor tempo, etc.')
+    pontos = models.IntegerField('Pontos', default=1, help_text='Pontos que este exercício vale na fase')
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Exercício da Fase'
+        verbose_name_plural = 'Exercícios da Fase'
+        ordering = ['fase', 'ordem']
+    
+    def __str__(self):
+        return f"{self.fase} - {self.exercicio.nome}"
+
+class Chave(models.Model):
+    """Modelo para chaves/partidas do torneio"""
+    
+    fase = models.ForeignKey(FaseTorneio, on_delete=models.CASCADE, related_name='chaves')
+    participante1 = models.ForeignKey(ParticipanteTorneio, on_delete=models.CASCADE, 
+                                       related_name='chaves_como_participante1', blank=True, null=True)
+    participante2 = models.ForeignKey(ParticipanteTorneio, on_delete=models.CASCADE, 
+                                      related_name='chaves_como_participante2', blank=True, null=True)
+    numero_chave = models.IntegerField('Número da Chave', default=1)
+    vencedor = models.ForeignKey(ParticipanteTorneio, on_delete=models.SET_NULL, 
+                                related_name='chaves_vencidas', blank=True, null=True)
+    data_partida = models.DateTimeField('Data da Partida', blank=True, null=True)
+    concluida = models.BooleanField('Concluída', default=False)
+    observacoes = models.TextField('Observações', blank=True)
+    created_at = models.DateTimeField('Criado em', auto_now_add=True)
+    updated_at = models.DateTimeField('Atualizado em', auto_now=True)
+    
+    class Meta:
+        verbose_name = 'Chave'
+        verbose_name_plural = 'Chaves'
+        ordering = ['fase', 'numero_chave']
+    
+    def __str__(self):
+        p1_nome = 'Aguardando'
+        p2_nome = 'Aguardando'
+        try:
+            if self.participante1:
+                p1_nome = str(self.participante1.usuario) if hasattr(self.participante1, 'usuario') else 'Participante 1'
+            if self.participante2:
+                p2_nome = str(self.participante2.usuario) if hasattr(self.participante2, 'usuario') else 'Participante 2'
+        except:
+            pass
+        return f"Chave {self.numero_chave}: {p1_nome} vs {p2_nome}"
+    
+    @property
+    def tem_dois_participantes(self):
+        return self.participante1 is not None and self.participante2 is not None
+
+class ResultadoPartida(models.Model):
+    """Modelo para resultados das partidas do torneio"""
+    
+    chave = models.OneToOneField(Chave, on_delete=models.CASCADE, related_name='resultado')
+    participante1_pontos = models.IntegerField('Pontos Participante 1', default=0)
+    participante2_pontos = models.IntegerField('Pontos Participante 2', default=0)
+    vencedor = models.ForeignKey(ParticipanteTorneio, on_delete=models.SET_NULL, 
+                                related_name='resultados_vencedor', blank=True, null=True)
+    detalhes = models.JSONField('Detalhes do Resultado', default=dict, 
+                               help_text='Detalhes dos exercícios realizados por cada participante')
+    observacoes = models.TextField('Observações', blank=True)
+    registrado_por = models.ForeignKey(Usuario, on_delete=models.SET_NULL, null=True, 
+                                      related_name='resultados_registrados')
+    data_registro = models.DateTimeField('Data de Registro', auto_now_add=True)
+    
+    class Meta:
+        verbose_name = 'Resultado da Partida'
+        verbose_name_plural = 'Resultados das Partidas'
+    
+    def __str__(self):
+        vencedor_nome = 'Não definido'
+        try:
+            if self.vencedor and hasattr(self.vencedor, 'usuario'):
+                vencedor_nome = str(self.vencedor.usuario)
+        except:
+            pass
+        return f"Resultado: Chave {self.chave.numero_chave if hasattr(self.chave, 'numero_chave') else 'N/A'} - Vencedor: {vencedor_nome}"
+    
+    def save(self, *args, **kwargs):
+        # Atualizar o vencedor na chave quando salvar o resultado
+        super().save(*args, **kwargs)
+        if self.vencedor:
+            self.chave.vencedor = self.vencedor
+            self.chave.concluida = True
+            self.chave.save()
+            
+            # Marcar o perdedor como eliminado
+            if self.chave.participante1 == self.vencedor:
+                perdedor = self.chave.participante2
+            else:
+                perdedor = self.chave.participante1
+            
+            if perdedor:
+                perdedor.eliminado = True
+                perdedor.save()
