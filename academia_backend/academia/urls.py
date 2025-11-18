@@ -37,6 +37,7 @@ urlpatterns = [
     path('auth/password-reset/', views.PasswordResetView.as_view(), name='password_reset'),
     
     # URLs específicas da academia
+    path('config/public/', views.ConfigPublicaView.as_view(), name='config_public'),
     path('dashboard/', views.DashboardView.as_view(), name='dashboard'),
     path('planos/escolher/', views.EscolherPlanoView.as_view(), name='escolher_plano'),
     path('treinos/', views.TreinoListView.as_view(), name='treinos'),
@@ -47,4 +48,8 @@ urlpatterns = [
     path('payments/pix/initiate/', views.PixInitiateView.as_view(), name='pix_initiate'),
     path('payments/pix/status/<uuid:pedido_id>/', views.PixStatusView.as_view(), name='pix_status'),
     path('payments/pix/confirm/<uuid:pedido_id>/', views.PixConfirmView.as_view(), name='pix_confirm'),
+    path('payments/cartao/initiate/', views.CartaoInitiateView.as_view(), name='cartao_initiate'),
+    path('payments/assinatura/status/<uuid:pedido_id>/', views.AssinaturaStatusView.as_view(), name='assinatura_status'),
+    path('payments/assinatura/cancelar/<uuid:pedido_id>/', views.AssinaturaCancelarView.as_view(), name='assinatura_cancelar'),
+    path('payments/mercadopago/webhook/', views.MercadoPagoWebhookView.as_view(), name='mercadopago_webhook'),
 ]

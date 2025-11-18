@@ -9,9 +9,9 @@ window.SALES_CONFIG = {
   },
   // Regras de pagamento por tipo
   paymentRules: {
-    mensal: ['pix'],
-    trimestral: ['pix'],
-    anual: ['pix']
+    mensal: ['pix', 'cartao'],  // Mensal aceita PIX e Cartão
+    trimestral: ['cartao'],      // Trimestral só Cartão
+    anual: ['cartao']            // Anual só Cartão
   },
   // Labels amigáveis
   labels: {
@@ -26,6 +26,19 @@ window.SALES_CONFIG = {
     pix: 'mercadopago'
   }
 };
+
+// Carregar Public Key do Mercado Pago via API (mais seguro)
+(async function loadMercadoPagoConfig() {
+  try {
+    const response = await fetch('/api/config/public/');
+    if (response.ok) {
+      const config = await response.json();
+      window.MERCADOPAGO_PUBLIC_KEY = config.mercadopago_public_key || '';
+    }
+  } catch (error) {
+    console.warn('Não foi possível carregar configuração do Mercado Pago:', error);
+  }
+})();
 
 window.getPlanTier = function(dias) {
   const cfg = window.SALES_CONFIG.planDurations;

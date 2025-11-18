@@ -37,14 +37,27 @@ body {
 
 .header-actions {
   display: flex;
+  flex-direction: row;
   align-items: center;
   gap: 12px;
+  flex-wrap: nowrap;
+}
+
+.header-actions form {
+  display: inline-flex;
+  margin: 0;
+  padding: 0;
+}
+
+.header-actions > * {
+  flex-shrink: 0;
 }
 
 .user-menu {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex-wrap: nowrap;
 }
 
 .user-name {
@@ -53,8 +66,12 @@ body {
   font-size: 0.9rem;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  white-space: nowrap;
+  flex-shrink: 0;
 }
 .btn {
   color: rgb(255, 255, 255);
@@ -88,8 +105,15 @@ body {
 
 .btn.alt {
   background: transparent;
-  border: none;
+  border: 1px solid var(--border);
   cursor: pointer;
+  color: var(--text);
+  display: inline-flex;
+  align-items: center;
+}
+
+.btn.alt:hover {
+  background: rgba(255, 255, 255, 0.05);
 }
 .portal-layout {
   display: grid;
@@ -167,12 +191,26 @@ body {
 .kv li {
   display: flex;
   justify-content: space-between;
+  align-items: center;
   padding: 8px 0;
   border-bottom: 1px dashed var(--border);
 }
 
 .kv li span {
   color: var(--muted);
+}
+
+.kv li strong {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  text-align: right;
+  justify-content: flex-end;
+}
+
+.kv li strong .muted {
+  white-space: nowrap;
 }
 
 .list {
@@ -266,13 +304,19 @@ body {
   }
 
   .header-actions {
-    flex-direction: column;
+    flex-direction: row !important;
     gap: 8px;
+    flex-wrap: nowrap;
+  }
+
+  .header-actions form {
+    display: inline-flex !important;
   }
 
   .user-menu {
-    flex-direction: column;
-    gap: 4px;
+    flex-direction: row;
+    gap: 8px;
+    flex-wrap: nowrap;
   }
 
   .user-name {

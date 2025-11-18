@@ -131,7 +131,7 @@ document.addEventListener('DOMContentLoaded', function() {
         const tier = window.getPlanTier(parseInt(dias));
         localStorage.setItem('pending_signup', JSON.stringify({ userData, planoId: parseInt(planoId), paymentMethod, preco, dias, tier }));
         const qs = new URLSearchParams({ plano_id: String(planoId), method: paymentMethod, preco: String(preco), tier });
-        window.location.href = `/static/html/checkout_frontend.html?${qs.toString()}`;
+        window.location.href = `/checkout/?${qs.toString()}`;
     });
     
     // Auto-focus no primeiro campo

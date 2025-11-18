@@ -89,12 +89,16 @@ DATABASES = {
 
 # Allow DATABASE_URL override (e.g., Postgres in production)
 DATABASE_URL = config('DATABASE_URL', default='')
-if DATABASE_URL:
-    DATABASES['default'] = dj_database_url.parse(
-        DATABASE_URL,
-        conn_max_age=600,
-        ssl_require=config('DB_SSL_REQUIRE', default=True, cast=bool)
-    )
+if DATABASE_URL and DATABASE_URL.strip():
+    try:
+        DATABASES['default'] = dj_database_url.parse(
+            DATABASE_URL,
+            conn_max_age=600,
+            ssl_require=config('DB_SSL_REQUIRE', default=True, cast=bool)
+        )
+    except Exception:
+        # Se falhar ao fazer parse, manter configuração padrão
+        pass
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
@@ -184,6 +188,12 @@ SECURE_PROXY_SSL_HEADER = ('HTTP_X_FORWARDED_PROTO', 'https')
 
 # Payments settings
 PIX_KEY = config('PIX_KEY', default='')
+
+# Mercado Pago settings
+MERCADOPAGO_ACCESS_TOKEN = config('MERCADOPAGO_ACCESS_TOKEN', default='')
+MERCADOPAGO_PUBLIC_KEY = config('MERCADOPAGO_PUBLIC_KEY', default='')
+MERCADOPAGO_WEBHOOK_URL = config('MERCADOPAGO_WEBHOOK_URL', default='http://localhost:8000')
+MERCADOPAGO_USE_MCP = config('MERCADOPAGO_USE_MCP', default=False, cast=bool)
 
 # Neon Auth settings
 STACK_PROJECT_ID = config('STACK_PROJECT_ID', default='')

@@ -41,35 +41,14 @@
 
     <section class="card" id="sec_cartao">
       <h2>Cartão de crédito</h2>
-      <p class="muted">Exemplo de formulário. Integração real via gateway (ex.: Mercado Pago) deve ser ligada aqui.</p>
-      <div class="grid-3">
-        <div class="field"><label>Número</label><input id="cc_num" type="text" placeholder="4111 1111 1111 1111"></div>
-        <div class="field"><label>Validade</label><input id="cc_exp" type="text" placeholder="12/29"></div>
-        <div class="field"><label>CVV</label><input id="cc_cvv" type="text" placeholder="123"></div>
-        <div class="field"><label>Nome no cartão</label><input id="cc_name" type="text" placeholder="Fulano de Tal"></div>
-        <div class="field"><label>Parcelas</label>
-          <select id="cc_installments">
-            <option value="1">1x</option>
-            <option value="3">3x</option>
-            <option value="6">6x</option>
-            <option value="12">12x</option>
-          </select>
-        </div>
-      </div>
-      <button id="btn_pagar_cartao" class="btn">Pagar agora</button>
+      <p class="muted">Você será redirecionado para o site do Mercado Pago para concluir o pagamento de forma segura.</p>
+      <button id="btn_pagar_cartao" class="btn">Pagar com Cartão</button>
     </section>
 
     <section class="card" id="sec_pix">
       <h2>PIX</h2>
-      <p class="muted">Gere e pague o QR Code para confirmar sua matrícula.</p>
-      <div id="pix_area" class="kv">
-        <img id="pix_qr" alt="QR Code PIX" style="max-width:220px;display:none;" />
-        <div>
-          <div><strong>Código Copia e Cola</strong></div>
-          <textarea id="pix_copy" rows="3" style="width:100%;"></textarea>
-        </div>
-      </div>
-      <button id="btn_gerar_pix" class="btn">Gerar PIX</button>
+      <p class="muted">Você será redirecionado para o site do Mercado Pago para gerar e pagar o QR Code PIX.</p>
+      <button id="btn_gerar_pix" class="btn">Pagar com PIX</button>
     </section>
 
     <div style="margin-top:16px;display:flex;gap:8px;">

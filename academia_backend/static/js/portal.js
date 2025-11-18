@@ -228,15 +228,17 @@ document.addEventListener('DOMContentLoaded', async function () {
       }
       
       // Status da matrícula
+      const matriculaEl = document.getElementById('aluno-matricula');
       if (data.matricula_ativa) {
-        document.getElementById('aluno-matricula').innerHTML = '<span style="color: #4CAF50;">Ativa</span>';
         if (data.matricula_ativa.data_fim) {
           const dataFim = new Date(data.matricula_ativa.data_fim);
           const formattedFim = dataFim.toLocaleDateString('pt-BR');
-          document.getElementById('aluno-matricula').innerHTML += `<br><small class="muted">Até ${formattedFim}</small>`;
+          matriculaEl.innerHTML = `<span style="color: #4CAF50; white-space: nowrap;">Ativa</span><span class="muted">Até ${formattedFim}</span>`;
+        } else {
+          matriculaEl.innerHTML = '<span style="color: #4CAF50;">Ativa</span>';
         }
       } else {
-        document.getElementById('aluno-matricula').innerHTML = '<span style="color: #f44336;">Inativa</span>';
+        matriculaEl.innerHTML = '<span style="color: #f44336;">Inativa</span>';
       }
       
       // Membro ativo

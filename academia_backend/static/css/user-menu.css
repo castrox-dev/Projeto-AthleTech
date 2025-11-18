@@ -25,9 +25,10 @@
   font-size: 0.9rem;
   padding: 8px 12px;
   background: rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
+  border-radius: 10px;
   border: 1px solid rgba(255, 255, 255, 0.1);
   white-space: nowrap;
+  display: inline-block;
 }
 
 /* Responsividade */
@@ -44,8 +45,13 @@
   }
   
   .header-actions {
-    flex-direction: column;
+    flex-direction: row !important;
     gap: 8px;
+    flex-wrap: nowrap;
+  }
+  
+  .header-actions form {
+    display: inline-flex !important;
   }
 }
 

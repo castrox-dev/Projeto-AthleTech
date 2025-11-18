@@ -238,10 +238,12 @@ class Frequencia(models.Model):
         return None
 
 class Pedido(models.Model):
-    """Pedido de pagamento (PIX) atrelado a uma matrícula/plano."""
+    """Pedido de pagamento atrelado a uma matrícula/plano."""
     METODO_PIX = 'pix'
+    METODO_CARTAO = 'cartao'
     METODO_CHOICES = [
         (METODO_PIX, 'PIX'),
+        (METODO_CARTAO, 'Cartão de Crédito'),
     ]
 
     STATUS_PENDENTE = 'pendente'
@@ -261,8 +263,24 @@ class Pedido(models.Model):
     valor = models.DecimalField(max_digits=8, decimal_places=2)
     metodo = models.CharField(max_length=10, choices=METODO_CHOICES, default=METODO_PIX)
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default=STATUS_PENDENTE)
+    
+    # Campos PIX
     pix_payload = models.TextField(blank=True)
     pix_qr = models.TextField(blank=True)
+    
+    # Campos Mercado Pago - Pagamentos únicos
+    mercado_pago_payment_id = models.BigIntegerField(null=True, blank=True, db_index=True)
+    mercado_pago_preference_id = models.CharField(max_length=200, blank=True, null=True, db_index=True, help_text='ID da preferência do Checkout Pro')
+    mercado_pago_status = models.CharField(max_length=50, blank=True)
+    mercado_pago_status_detail = models.CharField(max_length=100, blank=True)
+    
+    # Campos Mercado Pago - Assinaturas
+    mercado_pago_subscription_id = models.CharField(max_length=100, blank=True, null=True, db_index=True)
+    mercado_pago_subscription_status = models.CharField(max_length=50, blank=True)
+    is_subscription = models.BooleanField('É Assinatura', default=False)
+    subscription_start_date = models.DateField('Data de Início da Assinatura', null=True, blank=True)
+    subscription_end_date = models.DateField('Data de Fim da Assinatura', null=True, blank=True)
+    
     criado_em = models.DateTimeField(auto_now_add=True)
     atualizado_em = models.DateTimeField(auto_now=True)
 

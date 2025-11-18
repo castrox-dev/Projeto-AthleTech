@@ -606,6 +606,17 @@ class AvaliacaoListView(ListCreateAPIView):
         
         serializer.save(usuario=aluno)
 
+class ConfigPublicaView(APIView):
+    """View para retornar configurações públicas (seguras para frontend)"""
+    permission_classes = []  # Público - apenas dados seguros
+    
+    def get(self, request):
+        """Retorna apenas configurações que podem ser expostas no frontend"""
+        return Response({
+            'mercadopago_public_key': getattr(settings, 'MERCADOPAGO_PUBLIC_KEY', ''),
+        })
+
+
 class DashboardView(APIView):
     """View para dados do dashboard do usuário"""
     
@@ -668,15 +679,22 @@ class PixInitiateView(APIView):
             status=Pedido.STATUS_PENDENTE,
         )
 
-        # gerar payload simples (didático)
-        from django.conf import settings as djsettings
-        key = getattr(djsettings, 'PIX_KEY', '')
-        payload = f"PIX-KEY:{key}|VALOR:{plano.preco}|PLANO:{plano.id}|PED:{pedido.id_publico}"
-        pedido.pix_payload = payload
-        pedido.pix_qr = payload
-        pedido.save()
-
-        return Response(PedidoSerializer(pedido).data, status=201)
+        # Criar checkout preference no Mercado Pago
+        try:
+            from .services.mercadopago import MercadoPagoService
+            mp_service = MercadoPagoService()
+            checkout_data = mp_service.criar_checkout_preference(pedido, request.user, plano, 'pix')
+            
+            if checkout_data and checkout_data.get('init_point'):
+                return Response({
+                    **PedidoSerializer(pedido).data,
+                    'init_point': checkout_data.get('init_point'),
+                    'preference_id': checkout_data.get('preference_id'),
+                }, status=201)
+            else:
+                return Response({'detail': 'Erro ao criar checkout no Mercado Pago'}, status=500)
+        except (ValueError, ImportError) as e:
+            return Response({'detail': f'Erro ao processar pagamento: {str(e)}'}, status=500)
 
 class PixStatusView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -686,6 +704,30 @@ class PixStatusView(APIView):
             pedido = Pedido.objects.get(id_publico=pedido_id, usuario=request.user)
         except Pedido.DoesNotExist:
             return Response({'detail': 'Pedido não encontrado'}, status=404)
+        
+        # Se tiver payment_id do Mercado Pago, consultar status atualizado
+        if pedido.mercado_pago_payment_id:
+            try:
+                from .services.mercadopago import MercadoPagoService
+                mp_service = MercadoPagoService()
+                payment = mp_service.consultar_pagamento(pedido.mercado_pago_payment_id)
+                
+                if payment:
+                    # Atualizar status do pedido baseado no status do Mercado Pago
+                    mp_status = payment.get('status')
+                    if mp_status == 'approved':
+                        pedido.status = Pedido.STATUS_APROVADO
+                    elif mp_status in ['cancelled', 'rejected']:
+                        pedido.status = Pedido.STATUS_CANCELADO
+                    elif mp_status == 'expired':
+                        pedido.status = Pedido.STATUS_EXPIRADO
+                    
+                    pedido.mercado_pago_status = mp_status
+                    pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                    pedido.save()
+            except (ValueError, ImportError):
+                pass  # Ignorar se Mercado Pago não estiver configurado
+        
         return Response(PedidoSerializer(pedido).data)
 
 class PixConfirmView(APIView):
@@ -704,6 +746,281 @@ class PixConfirmView(APIView):
         pedido.status = Pedido.STATUS_APROVADO
         pedido.save()
         return Response(PedidoSerializer(pedido).data)
+
+
+class CartaoInitiateView(APIView):
+    """View para criar pagamento com cartão de crédito via Mercado Pago Checkout Pro"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request):
+        plano_id = request.data.get('plano_id')
+        
+        try:
+            plano = Plano.objects.get(id=plano_id, ativo=True)
+        except Plano.DoesNotExist:
+            return Response({'detail': 'Plano inválido'}, status=400)
+
+        # criar pedido pendente (assinatura)
+        pedido = Pedido.objects.create(
+            usuario=request.user,
+            plano=plano,
+            valor=plano.preco,
+            metodo=Pedido.METODO_CARTAO,
+            status=Pedido.STATUS_PENDENTE,
+            is_subscription=True,
+        )
+
+        try:
+            from .services.mercadopago import MercadoPagoService
+            mp_service = MercadoPagoService()
+            # Criar checkout preference (redireciona para Mercado Pago)
+            checkout_data = mp_service.criar_checkout_preference(
+                pedido, request.user, plano, 'cartao'
+            )
+            
+            if checkout_data and checkout_data.get('init_point'):
+                return Response({
+                    **PedidoSerializer(pedido).data,
+                    'init_point': checkout_data.get('init_point'),
+                    'preference_id': checkout_data.get('preference_id'),
+                }, status=201)
+            else:
+                return Response({'detail': 'Erro ao criar checkout no Mercado Pago'}, status=500)
+                
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=400)
+        except Exception as e:
+            return Response({'detail': f'Erro ao processar pagamento: {str(e)}'}, status=500)
+    
+    def _criar_matricula(self, pedido):
+        """Cria matrícula quando assinatura é aprovada"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        data_inicio = pedido.subscription_start_date or timezone.now().date()
+        data_fim = pedido.subscription_end_date or (data_inicio + timedelta(days=pedido.plano.duracao_dias))
+        
+        Matricula.objects.create(
+            usuario=pedido.usuario,
+            plano=pedido.plano,
+            data_inicio=data_inicio,
+            data_fim=data_fim,
+            valor_pago=pedido.valor,
+            status=Matricula.STATUS_ATIVA
+        )
+
+
+class AssinaturaStatusView(APIView):
+    """View para consultar status de assinatura"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def get(self, request, pedido_id):
+        try:
+            pedido = Pedido.objects.get(id_publico=pedido_id, usuario=request.user)
+        except Pedido.DoesNotExist:
+            return Response({'detail': 'Pedido não encontrado'}, status=404)
+        
+        # Se tiver subscription_id do Mercado Pago, consultar status atualizado
+        if pedido.mercado_pago_subscription_id:
+            try:
+                from .services.mercadopago import MercadoPagoService
+                mp_service = MercadoPagoService()
+                subscription = mp_service.consultar_assinatura(pedido.mercado_pago_subscription_id)
+                
+                if subscription:
+                    # Atualizar status do pedido baseado no status da assinatura
+                    mp_status = subscription.get('status')
+                    if mp_status in ['authorized', 'active']:
+                        pedido.status = Pedido.STATUS_APROVADO
+                    elif mp_status in ['cancelled', 'paused']:
+                        pedido.status = Pedido.STATUS_CANCELADO
+                    elif mp_status == 'pending':
+                        pedido.status = Pedido.STATUS_PENDENTE
+                    
+                    pedido.mercado_pago_subscription_status = mp_status
+                    pedido.save()
+            except (ValueError, ImportError):
+                pass  # Ignorar se Mercado Pago não estiver configurado
+        
+        return Response(PedidoSerializer(pedido).data)
+
+
+class AssinaturaCancelarView(APIView):
+    """View para cancelar assinatura"""
+    permission_classes = [permissions.IsAuthenticated]
+
+    def post(self, request, pedido_id):
+        try:
+            pedido = Pedido.objects.get(id_publico=pedido_id, usuario=request.user)
+        except Pedido.DoesNotExist:
+            return Response({'detail': 'Pedido não encontrado'}, status=404)
+        
+        if not pedido.is_subscription:
+            return Response({'detail': 'Este pedido não é uma assinatura'}, status=400)
+        
+        if not pedido.mercado_pago_subscription_id:
+            return Response({'detail': 'ID de assinatura não encontrado'}, status=400)
+        
+        try:
+            from .services.mercadopago import MercadoPagoService
+            mp_service = MercadoPagoService()
+            result = mp_service.cancelar_assinatura(pedido.mercado_pago_subscription_id)
+            
+            if result:
+                pedido.status = Pedido.STATUS_CANCELADO
+                pedido.mercado_pago_subscription_status = 'cancelled'
+                pedido.save()
+                
+                # Cancelar matrícula ativa
+                Matricula.objects.filter(
+                    usuario=pedido.usuario,
+                    status=Matricula.STATUS_ATIVA
+                ).update(status=Matricula.STATUS_CANCELADA)
+                
+                return Response(PedidoSerializer(pedido).data)
+            else:
+                return Response({'detail': 'Erro ao cancelar assinatura'}, status=400)
+                
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=400)
+        except Exception as e:
+            return Response({'detail': f'Erro ao cancelar assinatura: {str(e)}'}, status=500)
+
+
+class MercadoPagoWebhookView(APIView):
+    """View para receber webhooks do Mercado Pago"""
+    permission_classes = []  # Webhook não precisa autenticação JWT
+    
+    def post(self, request):
+        try:
+            from .services.mercadopago import MercadoPagoService
+            mp_service = MercadoPagoService()
+            result = mp_service.processar_webhook(request.data)
+            
+            if not result.get('success'):
+                return Response({'detail': result.get('message')}, status=400)
+            
+            # Buscar pedido pelo external_reference
+            external_ref = result.get('external_reference')
+            if not external_ref:
+                return Response({'detail': 'External reference não encontrado'}, status=400)
+            
+            try:
+                pedido = Pedido.objects.get(id_publico=external_ref)
+            except Pedido.DoesNotExist:
+                return Response({'detail': 'Pedido não encontrado'}, status=404)
+            
+            # Processar baseado no tipo (assinatura ou pagamento)
+            webhook_type = result.get('type')
+            
+            if webhook_type == 'subscription':
+                # Webhook de assinatura
+                mp_status = result.get('status')
+                pedido.mercado_pago_subscription_status = mp_status
+                
+                if mp_status in ['authorized', 'active']:
+                    pedido.status = Pedido.STATUS_APROVADO
+                    pedido.save()
+                    # Criar/renovar matrícula
+                    self._criar_matricula_se_necessario(pedido)
+                elif mp_status in ['cancelled', 'paused']:
+                    pedido.status = Pedido.STATUS_CANCELADO
+                    pedido.save()
+                    # Cancelar matrícula
+                    Matricula.objects.filter(
+                        usuario=pedido.usuario,
+                        status=Matricula.STATUS_ATIVA
+                    ).update(status=Matricula.STATUS_CANCELADA)
+                elif mp_status == 'pending':
+                    pedido.status = Pedido.STATUS_PENDENTE
+                    pedido.save()
+            
+            elif webhook_type == 'subscription_payment':
+                # Webhook de pagamento recorrente de assinatura
+                mp_status = result.get('status')
+                pedido.mercado_pago_status = mp_status
+                pedido.mercado_pago_status_detail = result.get('status_detail', '')
+                
+                if mp_status == 'approved':
+                    # Renovar matrícula quando pagamento recorrente é aprovado
+                    self._renovar_matricula(pedido)
+                elif mp_status in ['rejected', 'cancelled']:
+                    # Pagamento recorrente falhou - suspender matrícula
+                    Matricula.objects.filter(
+                        usuario=pedido.usuario,
+                        status=Matricula.STATUS_ATIVA
+                    ).update(status=Matricula.STATUS_SUSPENSA)
+            
+            else:
+                # Webhook de pagamento único
+                mp_status = result.get('status')
+                pedido.mercado_pago_status = mp_status
+                pedido.mercado_pago_status_detail = result.get('status_detail', '')
+                
+                if mp_status == 'approved':
+                    pedido.status = Pedido.STATUS_APROVADO
+                    pedido.save()
+                    # Criar matrícula se ainda não existir
+                    self._criar_matricula_se_necessario(pedido)
+                elif mp_status in ['cancelled', 'rejected']:
+                    pedido.status = Pedido.STATUS_CANCELADO
+                    pedido.save()
+                elif mp_status == 'expired':
+                    pedido.status = Pedido.STATUS_EXPIRADO
+                    pedido.save()
+            
+            pedido.save()
+            
+            return Response({'success': True}, status=200)
+            
+        except ValueError as e:
+            return Response({'detail': str(e)}, status=400)
+        except Exception as e:
+            return Response({'detail': f'Erro ao processar webhook: {str(e)}'}, status=500)
+    
+    def _criar_matricula_se_necessario(self, pedido):
+        """Cria matrícula se pagamento foi aprovado e ainda não existe matrícula ativa"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        # Verificar se já existe matrícula ativa para este pedido
+        matricula_existente = Matricula.objects.filter(
+            usuario=pedido.usuario,
+            status=Matricula.STATUS_ATIVA
+        ).first()
+        
+        if not matricula_existente:
+            data_inicio = pedido.subscription_start_date or timezone.now().date()
+            data_fim = pedido.subscription_end_date or (data_inicio + timedelta(days=pedido.plano.duracao_dias))
+            
+            Matricula.objects.create(
+                usuario=pedido.usuario,
+                plano=pedido.plano,
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                valor_pago=pedido.valor,
+                status=Matricula.STATUS_ATIVA
+            )
+    
+    def _renovar_matricula(self, pedido):
+        """Renova matrícula quando pagamento recorrente é aprovado"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        matricula = Matricula.objects.filter(
+            usuario=pedido.usuario,
+            status=Matricula.STATUS_ATIVA
+        ).first()
+        
+        if matricula:
+            # Renovar data de fim
+            nova_data_fim = matricula.data_fim + timedelta(days=pedido.plano.duracao_dias)
+            matricula.data_fim = nova_data_fim
+            matricula.status = Matricula.STATUS_ATIVA
+            matricula.save()
+        else:
+            # Criar nova matrícula se não existir
+            self._criar_matricula_se_necessario(pedido)
 
 def login_view(request):
     if request.method == 'POST':
