@@ -61,6 +61,48 @@ from .serializers import (
 )
 from .permissions import IsAcademiaAdmin, IsProfessorOrAdmin
 
+# Função auxiliar compartilhada para criar matrícula
+def criar_matricula_se_necessario(pedido):
+    """
+    Função auxiliar para criar matrícula se pagamento foi aprovado
+    e ainda não existe matrícula ativa. Usada por múltiplas views.
+    """
+    import logging
+    logger = logging.getLogger(__name__)
+    
+    # Verificar se o pedido está aprovado
+    if pedido.status != Pedido.STATUS_APROVADO:
+        logger.debug(f"Pedido {pedido.id_publico} não está aprovado (status: {pedido.status})")
+        return
+    
+    # Verificar se já existe matrícula ativa
+    if Matricula.objects.filter(usuario=pedido.usuario, status='ativa').exists():
+        # Garantir que o usuário está ativo
+        if not pedido.usuario.is_active_member:
+            pedido.usuario.is_active_member = True
+            pedido.usuario.save()
+            logger.info(f"Usuário {pedido.usuario.email} ativado como membro")
+        return
+    
+    # Criar nova matrícula
+    data_inicio = pedido.subscription_start_date or timezone.now().date()
+    data_fim = pedido.subscription_end_date or (data_inicio + timedelta(days=pedido.plano.duracao_dias))
+    
+    matricula = Matricula.objects.create(
+        usuario=pedido.usuario,
+        plano=pedido.plano,
+        data_inicio=data_inicio,
+        data_fim=data_fim,
+        valor_pago=pedido.valor,
+        status='ativa'
+    )
+    
+    # Ativar usuário como membro
+    pedido.usuario.is_active_member = True
+    pedido.usuario.save()
+    
+    logger.info(f"Matrícula criada (ID: {matricula.id}) e usuário {pedido.usuario.email} ativado")
+
 class RegisterView(APIView):
     permission_classes = [permissions.AllowAny]
 
@@ -551,9 +593,381 @@ class AlunoPortalPage(TemplateView):
                 return redirect('portal_admin_dashboard')
             if role == Usuario.Role.PROFESSOR:
                 return redirect('portal_professor_dashboard')
-
+            
+            # IMPORTANTE: Verificar e processar pagamento quando usuário retorna do Mercado Pago
+            # Verificar sempre que acessar o portal, mas APENAS se não tiver matrícula ativa
+            # Isso garante que mesmo retornando manualmente, o pagamento será verificado
+            # Usar thread para não bloquear a resposta
+            import threading
+            def verificar_em_background():
+                try:
+                    # Verificar se tem matrícula ativa antes de verificar pagamento
+                    matricula_ativa = Matricula.objects.filter(
+                        usuario=request.user,
+                        status='ativa'
+                    ).first()
+                    
+                    if not matricula_ativa:
+                        self._verificar_e_processar_pagamento(request.user)
+                    else:
+                        import logging
+                        logger = logging.getLogger(__name__)
+                        logger.debug(f"Usuário {request.user.email} já possui matrícula ativa, pulando verificação")
+                except Exception as e:
+                    import logging
+                    logger = logging.getLogger(__name__)
+                    logger.error(f"Erro ao verificar pagamento em background: {str(e)}")
+            
+            # Verificar sempre, mas em background para não bloquear
+            thread = threading.Thread(target=verificar_em_background)
+            thread.daemon = True
+            thread.start()
+        
         # Permitir acesso - autenticação será verificada no frontend via JWT
         return super().dispatch(request, *args, **kwargs)
+    
+    def _verificar_e_processar_pagamento(self, usuario):
+        """
+        Verifica e processa pagamento pendente quando usuário retorna do Mercado Pago
+        Busca o último pedido pendente e verifica se foi aprovado usando múltiplas estratégias
+        Verifica apenas pedidos criados nas últimas 2 horas para evitar verificações desnecessárias
+        IMPORTANTE: Só verifica se o usuário NÃO tiver matrícula ativa
+        """
+        try:
+            from .services.mercadopago import MercadoPagoService
+            from django.utils import timezone
+            from datetime import timedelta
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # IMPORTANTE: Só verificar se o usuário NÃO tiver matrícula ativa
+            # Se já tiver matrícula ativa, não precisa verificar pagamentos
+            matricula_ativa = Matricula.objects.filter(
+                usuario=usuario,
+                status='ativa'
+            ).first()
+            
+            if matricula_ativa:
+                logger.debug(f"Usuário {usuario.email} já possui matrícula ativa (ID: {matricula_ativa.id}), pulando verificação de pagamento")
+                return
+            
+            logger.info(f"🔍 Usuário {usuario.email} não possui matrícula ativa, verificando pagamentos pendentes...")
+            
+            # Buscar último pedido pendente do usuário criado nas últimas 2 horas
+            # Isso evita verificar pedidos muito antigos
+            duas_horas_atras = timezone.now() - timedelta(hours=2)
+            
+            pedido = Pedido.objects.filter(
+                usuario=usuario,
+                status=Pedido.STATUS_PENDENTE,
+                criado_em__gte=duas_horas_atras  # Apenas pedidos recentes
+            ).order_by('-criado_em').first()
+            
+            if not pedido:
+                logger.debug("Nenhum pedido pendente recente encontrado para verificação")
+                return
+            
+            logger.info(f"🔍 Verificando pagamento do pedido {pedido.id_publico} para usuário {usuario.email} (criado há {timezone.now() - pedido.criado_em})")
+            logger.info(f"   Payment ID: {pedido.mercado_pago_payment_id}")
+            logger.info(f"   Preference ID: {pedido.mercado_pago_preference_id}")
+            
+            mp_service = MercadoPagoService()
+            pagamento_processado = False
+            
+            # Estratégia 1: Se tiver payment_id, consultar status diretamente
+            if pedido.mercado_pago_payment_id:
+                logger.info(f"   Consultando pagamento pelo payment_id: {pedido.mercado_pago_payment_id}")
+                payment = mp_service.consultar_pagamento(pedido.mercado_pago_payment_id)
+                if payment:
+                    logger.info(f"   Status do pagamento: {payment.get('status')}")
+                    if payment.get('status') == 'approved':
+                        pedido.status = Pedido.STATUS_APROVADO
+                        pedido.mercado_pago_status = 'approved'
+                        pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                        pedido.save()
+                        self._criar_matricula_se_necessario(pedido)
+                        pagamento_processado = True
+                        logger.info(f"✅ Pagamento aprovado e matrícula criada para pedido {pedido.id_publico}")
+            
+            # Estratégia 2: Se não processou e tiver preference_id, buscar pagamentos pela preference
+            if not pagamento_processado and pedido.mercado_pago_preference_id:
+                logger.info(f"   Buscando pagamentos pela preference_id: {pedido.mercado_pago_preference_id}")
+                payments = mp_service.buscar_pagamentos_por_preference(pedido.mercado_pago_preference_id)
+                if payments:
+                    logger.info(f"   Encontrados {len(payments)} pagamento(s)")
+                    # Buscar primeiro pagamento aprovado
+                    for payment in payments:
+                        payment_status = payment.get('status')
+                        logger.info(f"   Verificando pagamento {payment.get('id')} - Status: {payment_status}")
+                        if payment_status == 'approved':
+                            payment_id = payment.get('id')
+                            if payment_id:
+                                try:
+                                    pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
+                                    logger.info(f"   Payment ID {payment_id} salvo no pedido")
+                                except (ValueError, TypeError) as e:
+                                    logger.warning(f"   Erro ao salvar payment_id: {e}")
+                            
+                            pedido.status = Pedido.STATUS_APROVADO
+                            pedido.mercado_pago_status = 'approved'
+                            pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                            pedido.save()
+                            
+                            # Criar matrícula automaticamente
+                            self._criar_matricula_se_necessario(pedido)
+                            pagamento_processado = True
+                            logger.info(f"✅ Pagamento aprovado encontrado e matrícula criada para pedido {pedido.id_publico}")
+                            break
+            
+            # Estratégia 3: Se ainda não processou, buscar por external_reference (id_publico)
+            if not pagamento_processado:
+                logger.info(f"   Buscando pagamentos por external_reference: {pedido.id_publico}")
+                payments = mp_service.buscar_pagamentos_por_external_reference(pedido.id_publico)
+                if payments:
+                    logger.info(f"   Encontrados {len(payments)} pagamento(s) por external_reference")
+                    # Buscar primeiro pagamento aprovado
+                    for payment in payments:
+                        payment_status = payment.get('status')
+                        logger.info(f"   Verificando pagamento {payment.get('id')} - Status: {payment_status}")
+                        if payment_status == 'approved':
+                            payment_id = payment.get('id')
+                            if payment_id:
+                                try:
+                                    pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
+                                    logger.info(f"   Payment ID {payment_id} salvo no pedido")
+                                except (ValueError, TypeError) as e:
+                                    logger.warning(f"   Erro ao salvar payment_id: {e}")
+                            
+                            pedido.status = Pedido.STATUS_APROVADO
+                            pedido.mercado_pago_status = 'approved'
+                            pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                            pedido.save()
+                            
+                            # Criar matrícula automaticamente
+                            self._criar_matricula_se_necessario(pedido)
+                            pagamento_processado = True
+                            logger.info(f"✅ Pagamento aprovado encontrado por external_reference e matrícula criada para pedido {pedido.id_publico}")
+                            break
+                            
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erro ao verificar pagamento: {str(e)}", exc_info=True)
+    
+    def _criar_matricula_se_necessario(self, pedido):
+        """Usa função auxiliar compartilhada"""
+        criar_matricula_se_necessario(pedido)
+
+class VerificarPagamentoRetornoView(APIView):
+    """
+    View para verificar e processar pagamento quando usuário retorna do Mercado Pago
+    Pode ser chamada pelo frontend quando detectar payment=success na URL
+    """
+    permission_classes = [permissions.IsAuthenticated]
+    
+    def post(self, request):
+        """
+        Verifica o último pedido pendente do usuário e processa se foi aprovado
+        Também verifica parâmetros da URL (payment_id, preference_id) que o Mercado Pago pode retornar
+        """
+        try:
+            from .services.mercadopago import MercadoPagoService
+            import logging
+            logger = logging.getLogger(__name__)
+            
+            # Verificar se há parâmetros na URL que o Mercado Pago retorna
+            payment_id_url = request.data.get('payment_id') or request.query_params.get('payment_id')
+            preference_id_url = request.data.get('preference_id') or request.query_params.get('preference_id')
+            status_url = request.data.get('status') or request.query_params.get('status')
+            
+            logger.info(f"🔍 Verificando pagamento para usuário {request.user.email}")
+            if payment_id_url:
+                logger.info(f"   Payment ID da URL: {payment_id_url}")
+            if preference_id_url:
+                logger.info(f"   Preference ID da URL: {preference_id_url}")
+            if status_url:
+                logger.info(f"   Status da URL: {status_url}")
+            
+            # Buscar pedido - primeiro tentar por payment_id/preference_id da URL, depois último pendente
+            pedido = None
+            if payment_id_url:
+                try:
+                    payment_id_int = int(payment_id_url) if str(payment_id_url).isdigit() else None
+                    if payment_id_int:
+                        pedido = Pedido.objects.filter(
+                            usuario=request.user,
+                            mercado_pago_payment_id=payment_id_int
+                        ).first()
+                        if pedido:
+                            logger.info(f"   Pedido encontrado por payment_id da URL: {pedido.id_publico}")
+                except (ValueError, TypeError):
+                    pass
+            
+            if not pedido and preference_id_url:
+                pedido = Pedido.objects.filter(
+                    usuario=request.user,
+                    mercado_pago_preference_id=preference_id_url
+                ).first()
+                if pedido:
+                    logger.info(f"   Pedido encontrado por preference_id da URL: {pedido.id_publico}")
+            
+            # Se não encontrou pelos parâmetros da URL, buscar último pedido pendente
+            if not pedido:
+                pedido = Pedido.objects.filter(
+                    usuario=request.user,
+                    status=Pedido.STATUS_PENDENTE
+                ).order_by('-criado_em').first()
+                if pedido:
+                    logger.info(f"   Usando último pedido pendente: {pedido.id_publico}")
+            
+            if not pedido:
+                return Response({
+                    'success': False,
+                    'message': 'Nenhum pedido encontrado'
+                }, status=404)
+            
+            logger.info(f"🔍 Verificando pagamento do pedido {pedido.id_publico}")
+            logger.info(f"   Payment ID: {pedido.mercado_pago_payment_id}")
+            logger.info(f"   Preference ID: {pedido.mercado_pago_preference_id}")
+            logger.info(f"   Status atual: {pedido.status}")
+            
+            mp_service = MercadoPagoService()
+            pagamento_processado = False
+            
+            # Estratégia 1: Se tiver payment_id (da URL ou do pedido), consultar diretamente
+            payment_id_para_consultar = payment_id_url or (pedido.mercado_pago_payment_id and str(pedido.mercado_pago_payment_id))
+            if payment_id_para_consultar:
+                try:
+                    payment_id_int = int(payment_id_para_consultar) if str(payment_id_para_consultar).isdigit() else None
+                    if payment_id_int:
+                        logger.info(f"   Consultando pagamento pelo payment_id: {payment_id_int}")
+                        payment = mp_service.consultar_pagamento(payment_id_int)
+                        if payment:
+                            logger.info(f"   Status do pagamento: {payment.get('status')}")
+                            if payment.get('status') == 'approved':
+                                pedido.mercado_pago_payment_id = payment_id_int
+                                pedido.status = Pedido.STATUS_APROVADO
+                                pedido.mercado_pago_status = 'approved'
+                                pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                                pedido.save()
+                                self._criar_matricula_se_necessario(pedido)
+                                pagamento_processado = True
+                                logger.info(f"✅ Pagamento aprovado e matrícula criada para pedido {pedido.id_publico}")
+                        else:
+                            logger.warning(f"   Pagamento não encontrado no Mercado Pago")
+                except (ValueError, TypeError) as e:
+                    logger.warning(f"   Erro ao processar payment_id: {e}")
+            
+            # Estratégia 2: Se não processou e tiver preference_id, buscar pagamentos pela preference
+            if not pagamento_processado and pedido.mercado_pago_preference_id:
+                logger.info(f"   Buscando pagamentos pela preference_id: {pedido.mercado_pago_preference_id}")
+                payments = mp_service.buscar_pagamentos_por_preference(pedido.mercado_pago_preference_id)
+                if payments:
+                    logger.info(f"   Encontrados {len(payments)} pagamento(s)")
+                    # Buscar primeiro pagamento aprovado
+                    for payment in payments:
+                        payment_status = payment.get('status')
+                        logger.info(f"   Verificando pagamento {payment.get('id')} - Status: {payment_status}")
+                        if payment_status == 'approved':
+                            payment_id = payment.get('id')
+                            if payment_id:
+                                try:
+                                    pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
+                                    logger.info(f"   Payment ID {payment_id} salvo no pedido")
+                                except (ValueError, TypeError) as e:
+                                    logger.warning(f"   Erro ao salvar payment_id: {e}")
+                            
+                            pedido.status = Pedido.STATUS_APROVADO
+                            pedido.mercado_pago_status = 'approved'
+                            pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                            pedido.save()
+                            
+                            # Criar matrícula automaticamente
+                            self._criar_matricula_se_necessario(pedido)
+                            pagamento_processado = True
+                            logger.info(f"✅ Pagamento aprovado encontrado e matrícula criada para pedido {pedido.id_publico}")
+                            break
+                else:
+                    logger.warning(f"   Nenhum pagamento encontrado para preference_id: {pedido.mercado_pago_preference_id}")
+            
+            # Estratégia 3: Se ainda não processou, buscar por external_reference (id_publico)
+            if not pagamento_processado:
+                logger.info(f"   Buscando pagamentos por external_reference: {pedido.id_publico}")
+                payments = mp_service.buscar_pagamentos_por_external_reference(pedido.id_publico)
+                if payments:
+                    logger.info(f"   Encontrados {len(payments)} pagamento(s) por external_reference")
+                    # Buscar primeiro pagamento aprovado
+                    for payment in payments:
+                        payment_status = payment.get('status')
+                        logger.info(f"   Verificando pagamento {payment.get('id')} - Status: {payment_status}")
+                        if payment_status == 'approved':
+                            payment_id = payment.get('id')
+                            if payment_id:
+                                try:
+                                    pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
+                                    logger.info(f"   Payment ID {payment_id} salvo no pedido")
+                                except (ValueError, TypeError) as e:
+                                    logger.warning(f"   Erro ao salvar payment_id: {e}")
+                            
+                            pedido.status = Pedido.STATUS_APROVADO
+                            pedido.mercado_pago_status = 'approved'
+                            pedido.mercado_pago_status_detail = payment.get('status_detail', '')
+                            pedido.save()
+                            
+                            # Criar matrícula automaticamente
+                            self._criar_matricula_se_necessario(pedido)
+                            pagamento_processado = True
+                            logger.info(f"✅ Pagamento aprovado encontrado por external_reference e matrícula criada para pedido {pedido.id_publico}")
+                            break
+            
+            if pagamento_processado:
+                # Recarregar pedido para ter dados atualizados
+                pedido.refresh_from_db()
+                
+                # Verificar se matrícula foi criada
+                matricula_ativa = Matricula.objects.filter(
+                    usuario=pedido.usuario,
+                    status='ativa'
+                ).first()
+                
+                logger.info(f"✅ Resumo do processamento:")
+                logger.info(f"   - Pedido: {pedido.id_publico} - Status: {pedido.status}")
+                logger.info(f"   - Matrícula criada: {'Sim' if matricula_ativa else 'Não'}")
+                logger.info(f"   - Usuário ativo: {pedido.usuario.is_active_member}")
+                
+                return Response({
+                    'success': True,
+                    'message': 'Pagamento processado com sucesso',
+                    'pedido': PedidoSerializer(pedido).data,
+                    'matricula_criada': matricula_ativa is not None,
+                    'usuario_ativo': pedido.usuario.is_active_member
+                })
+            else:
+                # Mesmo se não processou, retornar informações do pedido
+                logger.warning(f"⚠️ Pagamento ainda não foi aprovado para pedido {pedido.id_publico}")
+                return Response({
+                    'success': False,
+                    'message': 'Pagamento ainda não foi aprovado',
+                    'pedido': PedidoSerializer(pedido).data,
+                    'sugestao': 'O pagamento pode estar pendente. Tente novamente em alguns segundos ou aguarde o processamento automático.'
+                })
+                
+        except Exception as e:
+            import logging
+            logger = logging.getLogger(__name__)
+            logger.error(f"Erro ao verificar pagamento: {str(e)}", exc_info=True)
+            return Response({
+                'success': False,
+                'message': f'Erro ao verificar pagamento: {str(e)}'
+            }, status=500)
+    
+    def _criar_matricula_se_necessario(self, pedido):
+        """Usa função auxiliar compartilhada"""
+        criar_matricula_se_necessario(pedido)
+    
+    def _criar_matricula_se_necessario(self, pedido):
+        """Usa função auxiliar compartilhada"""
+        criar_matricula_se_necessario(pedido)
 
 class AvaliacaoListView(ListCreateAPIView):
     """View para listar avaliações do usuário e permitir cadastro por professores"""
@@ -717,6 +1131,11 @@ class PixStatusView(APIView):
                     mp_status = payment.get('status')
                     if mp_status == 'approved':
                         pedido.status = Pedido.STATUS_APROVADO
+                        pedido.mercado_pago_payment_id = payment.get('id')
+                        pedido.save()
+                        # Criar matrícula automaticamente quando pagamento é aprovado
+                        # Funciona tanto em ambiente de teste quanto produção
+                        self._criar_matricula_se_necessario(pedido)
                     elif mp_status in ['cancelled', 'rejected']:
                         pedido.status = Pedido.STATUS_CANCELADO
                     elif mp_status == 'expired':
@@ -728,7 +1147,93 @@ class PixStatusView(APIView):
             except (ValueError, ImportError):
                 pass  # Ignorar se Mercado Pago não estiver configurado
         
+        # Se não tiver payment_id mas tiver preference_id, buscar pagamentos aprovados
+        # Isso é importante quando o usuário retorna do Mercado Pago e o webhook ainda não foi recebido
+        elif pedido.mercado_pago_preference_id and pedido.status == Pedido.STATUS_PENDENTE:
+            try:
+                from .services.mercadopago import MercadoPagoService
+                mp_service = MercadoPagoService()
+                payments = mp_service.buscar_pagamentos_por_preference(pedido.mercado_pago_preference_id)
+                
+                if payments:
+                    # Buscar primeiro pagamento aprovado
+                    approved_payment = None
+                    for payment in payments:
+                        if payment.get('status') == 'approved':
+                            approved_payment = payment
+                            break
+                    
+                    if approved_payment:
+                        # IMPORTANTE: Atualizar pedido com payment_id e status
+                        payment_id = approved_payment.get('id')
+                        if payment_id:
+                            try:
+                                pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
+                                import logging
+                                logger_mp = logging.getLogger(__name__)
+                                logger_mp.info(f"Payment ID {payment_id} encontrado e salvo para pedido {pedido.id_publico}")
+                            except (ValueError, TypeError) as e:
+                                import logging
+                                logger_mp = logging.getLogger(__name__)
+                                logger_mp.warning(f"Erro ao salvar payment_id: {e}")
+                        
+                        pedido.status = Pedido.STATUS_APROVADO
+                        pedido.mercado_pago_status = 'approved'
+                        pedido.mercado_pago_status_detail = approved_payment.get('status_detail', '')
+                        pedido.save()
+                        # Criar matrícula automaticamente
+                        self._criar_matricula_se_necessario(pedido)
+                    else:
+                        # Verificar se há pagamento pendente ou rejeitado
+                        for payment in payments:
+                            status = payment.get('status')
+                            if status in ['cancelled', 'rejected']:
+                                pedido.status = Pedido.STATUS_CANCELADO
+                                pedido.mercado_pago_payment_id = payment.get('id')
+                                pedido.mercado_pago_status = status
+                                pedido.save()
+                                break
+                            elif status == 'expired':
+                                pedido.status = Pedido.STATUS_EXPIRADO
+                                pedido.mercado_pago_payment_id = payment.get('id')
+                                pedido.mercado_pago_status = status
+                                pedido.save()
+                                break
+            except (ValueError, ImportError) as e:
+                import logging
+                logger_mp = logging.getLogger(__name__)
+                logger_mp.warning(f"Erro ao buscar pagamentos por preference: {e}")
+                pass  # Ignorar se Mercado Pago não estiver configurado
+        
         return Response(PedidoSerializer(pedido).data)
+    
+    def _criar_matricula_se_necessario(self, pedido):
+        """Cria matrícula se pagamento foi aprovado e ainda não existe matrícula ativa"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        # Verificar se já existe matrícula ativa para este pedido
+        matricula_existente = Matricula.objects.filter(
+            usuario=pedido.usuario,
+            status='ativa'  # Status da matrícula
+        ).first()
+        
+        if not matricula_existente:
+            data_inicio = pedido.subscription_start_date or timezone.now().date()
+            data_fim = pedido.subscription_end_date or (data_inicio + timedelta(days=pedido.plano.duracao_dias))
+            
+            Matricula.objects.create(
+                usuario=pedido.usuario,
+                plano=pedido.plano,  # Garante que o plano selecionado seja salvo
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                valor_pago=pedido.valor,
+                status='ativa'
+            )
+            
+            # Ativar usuário como membro
+            pedido.usuario.is_active_member = True
+            pedido.usuario.save()
 
 class PixConfirmView(APIView):
     permission_classes = [permissions.IsAuthenticated]
@@ -745,7 +1250,40 @@ class PixConfirmView(APIView):
         # marcar como aprovado (simulação de webhook)
         pedido.status = Pedido.STATUS_APROVADO
         pedido.save()
+        
+        # Criar matrícula automaticamente quando pagamento é aprovado
+        # Funciona tanto em ambiente de teste quanto produção
+        self._criar_matricula_se_necessario(pedido)
+        
         return Response(PedidoSerializer(pedido).data)
+    
+    def _criar_matricula_se_necessario(self, pedido):
+        """Cria matrícula se assinatura foi autorizada e ainda não existe matrícula ativa"""
+        from datetime import timedelta
+        from django.utils import timezone
+        
+        # Verificar se já existe matrícula ativa para este pedido
+        matricula_existente = Matricula.objects.filter(
+            usuario=pedido.usuario,
+            status='ativa'  # Status da matrícula
+        ).first()
+        
+        if not matricula_existente:
+            data_inicio = pedido.subscription_start_date or timezone.now().date()
+            data_fim = pedido.subscription_end_date or (data_inicio + timedelta(days=pedido.plano.duracao_dias))
+            
+            Matricula.objects.create(
+                usuario=pedido.usuario,
+                plano=pedido.plano,  # Garante que o plano selecionado seja salvo
+                data_inicio=data_inicio,
+                data_fim=data_fim,
+                valor_pago=pedido.valor,
+                status='ativa'
+            )
+            
+            # Ativar usuário como membro
+            pedido.usuario.is_active_member = True
+            pedido.usuario.save()
 
 
 class CartaoInitiateView(APIView):
@@ -760,14 +1298,16 @@ class CartaoInitiateView(APIView):
         except Plano.DoesNotExist:
             return Response({'detail': 'Plano inválido'}, status=400)
 
-        # criar pedido pendente (assinatura)
+        # criar pedido pendente (pagamento único via Checkout Pro)
+        # NOTA: Checkout Pro cria pagamentos únicos, não assinaturas
+        # Para assinaturas recorrentes, seria necessário usar API de Preapproval
         pedido = Pedido.objects.create(
             usuario=request.user,
             plano=plano,
             valor=plano.preco,
             metodo=Pedido.METODO_CARTAO,
             status=Pedido.STATUS_PENDENTE,
-            is_subscription=True,
+            is_subscription=False,  # Checkout Pro cria pagamentos únicos
         )
 
         try:
@@ -832,6 +1372,10 @@ class AssinaturaStatusView(APIView):
                     mp_status = subscription.get('status')
                     if mp_status in ['authorized', 'active']:
                         pedido.status = Pedido.STATUS_APROVADO
+                        pedido.save()
+                        # Criar matrícula automaticamente quando assinatura é autorizada
+                        # Funciona tanto em ambiente de teste quanto produção
+                        self._criar_matricula_se_necessario(pedido)
                     elif mp_status in ['cancelled', 'paused']:
                         pedido.status = Pedido.STATUS_CANCELADO
                     elif mp_status == 'pending':
@@ -874,7 +1418,7 @@ class AssinaturaCancelarView(APIView):
                 # Cancelar matrícula ativa
                 Matricula.objects.filter(
                     usuario=pedido.usuario,
-                    status=Matricula.STATUS_ATIVA
+                    status='ativa'
                 ).update(status=Matricula.STATUS_CANCELADA)
                 
                 return Response(PedidoSerializer(pedido).data)
@@ -929,7 +1473,7 @@ class MercadoPagoWebhookView(APIView):
                     # Cancelar matrícula
                     Matricula.objects.filter(
                         usuario=pedido.usuario,
-                        status=Matricula.STATUS_ATIVA
+                        status='ativa'
                     ).update(status=Matricula.STATUS_CANCELADA)
                 elif mp_status == 'pending':
                     pedido.status = Pedido.STATUS_PENDENTE
@@ -948,12 +1492,21 @@ class MercadoPagoWebhookView(APIView):
                     # Pagamento recorrente falhou - suspender matrícula
                     Matricula.objects.filter(
                         usuario=pedido.usuario,
-                        status=Matricula.STATUS_ATIVA
+                        status='ativa'
                     ).update(status=Matricula.STATUS_SUSPENSA)
             
             else:
                 # Webhook de pagamento único
                 mp_status = result.get('status')
+                payment_id = result.get('payment_id')
+                
+                # IMPORTANTE: Salvar payment_id se ainda não estiver salvo
+                if payment_id and not pedido.mercado_pago_payment_id:
+                    try:
+                        pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
+                    except (ValueError, TypeError):
+                        pass
+                
                 pedido.mercado_pago_status = mp_status
                 pedido.mercado_pago_status_detail = result.get('status_detail', '')
                 
@@ -986,7 +1539,7 @@ class MercadoPagoWebhookView(APIView):
         # Verificar se já existe matrícula ativa para este pedido
         matricula_existente = Matricula.objects.filter(
             usuario=pedido.usuario,
-            status=Matricula.STATUS_ATIVA
+            status='ativa'  # Status da matrícula
         ).first()
         
         if not matricula_existente:
@@ -999,7 +1552,7 @@ class MercadoPagoWebhookView(APIView):
                 data_inicio=data_inicio,
                 data_fim=data_fim,
                 valor_pago=pedido.valor,
-                status=Matricula.STATUS_ATIVA
+                status='ativa'
             )
     
     def _renovar_matricula(self, pedido):

@@ -52,4 +52,5 @@ urlpatterns = [
     path('payments/assinatura/status/<uuid:pedido_id>/', views.AssinaturaStatusView.as_view(), name='assinatura_status'),
     path('payments/assinatura/cancelar/<uuid:pedido_id>/', views.AssinaturaCancelarView.as_view(), name='assinatura_cancelar'),
     path('payments/mercadopago/webhook/', views.MercadoPagoWebhookView.as_view(), name='mercadopago_webhook'),
+    path('payments/verificar-retorno/', views.VerificarPagamentoRetornoView.as_view(), name='verificar_pagamento_retorno'),
 ]

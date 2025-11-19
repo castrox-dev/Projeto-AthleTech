@@ -82,6 +82,113 @@ document.addEventListener('DOMContentLoaded', async function () {
     return res;
   }
 
+  // Função para verificar e processar pagamento quando retornar do Mercado Pago
+  async function verificarPagamentoRetorno() {
+    try {
+      console.log('Verificando pagamento após retorno do Mercado Pago...');
+      
+      const token = getAccessToken();
+      if (!token) {
+        console.warn('Sem token para verificar pagamento');
+        return;
+      }
+
+      // Capturar parâmetros da URL que o Mercado Pago pode retornar
+      const urlParams = new URLSearchParams(window.location.search);
+      const paymentId = urlParams.get('payment_id');
+      const preferenceId = urlParams.get('preference_id');
+      const status = urlParams.get('status');
+      
+      const payload = {};
+      if (paymentId) {
+        payload.payment_id = paymentId;
+        console.log('Payment ID da URL:', paymentId);
+      }
+      if (preferenceId) {
+        payload.preference_id = preferenceId;
+        console.log('Preference ID da URL:', preferenceId);
+      }
+      if (status) {
+        payload.status = status;
+        console.log('Status da URL:', status);
+      }
+
+      const response = await authenticatedFetch(`${API_BASE_URL}/payments/verificar-retorno/`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
+        },
+        body: JSON.stringify(payload)
+      });
+
+      if (!response) {
+        return; // authenticatedFetch já tratou o erro
+      }
+
+      const data = await response.json();
+
+      if (data.success) {
+        console.log('✅ Pagamento processado com sucesso!', data.message);
+        if (data.matricula_criada) {
+          console.log('✅ Matrícula criada com sucesso!');
+        }
+        if (data.usuario_ativo) {
+          console.log('✅ Usuário ativado como membro!');
+        }
+        
+        // Remover parâmetro da URL para evitar verificação duplicada
+        const url = new URL(window.location);
+        url.searchParams.delete('payment');
+        window.history.replaceState({}, '', url);
+        
+        // Limpar flag de verificação em progresso
+        window.paymentVerificationInProgress = false;
+        window.paymentVerificationAttempts = 0;
+        
+        // Recarregar dados do dashboard para atualizar informações
+        console.log('🔄 Recarregando página para atualizar dados...');
+        setTimeout(() => {
+          window.location.reload();
+        }, 1500);
+      } else {
+        console.log('⏳ Pagamento ainda não foi aprovado:', data.message);
+        if (data.sugestao) {
+          console.log('💡 Sugestão:', data.sugestao);
+        }
+        
+        // Se não tiver pedido pendente, não tentar novamente
+        if (data.message && data.message.includes('Nenhum pedido encontrado')) {
+          console.log('ℹ️ Nenhum pedido pendente encontrado');
+          window.paymentVerificationInProgress = false;
+          window.paymentVerificationAttempts = 0;
+          return;
+        }
+        
+        // Tentar novamente apenas se tiver pedido pendente (máximo 3 tentativas)
+        if (!window.paymentVerificationAttempts) {
+          window.paymentVerificationAttempts = 0;
+        }
+        window.paymentVerificationAttempts++;
+        
+        if (window.paymentVerificationAttempts < 3) {
+          console.log(`🔄 Tentativa ${window.paymentVerificationAttempts}/3 - Tentando novamente em 3 segundos...`);
+          setTimeout(() => {
+            verificarPagamentoRetorno();
+          }, 3000);
+        } else {
+          console.log('⏸️ Limite de tentativas atingido. O pagamento será processado pelo webhook.');
+          window.paymentVerificationInProgress = false;
+          window.paymentVerificationAttempts = 0;
+        }
+      }
+    } catch (error) {
+      console.error('Erro ao verificar pagamento:', error);
+      window.paymentVerificationInProgress = false;
+      window.paymentVerificationAttempts = 0;
+    }
+  }
+
   // Verificar se há token antes de tentar carregar dados
   const accessToken = getAccessToken();
   if (!accessToken) {
@@ -90,7 +197,7 @@ document.addEventListener('DOMContentLoaded', async function () {
     return;
   }
 
-  // Load dashboard data
+  // Load dashboard data primeiro para verificar se tem matrícula ativa
   try {
     const resp = await authenticatedFetch(`${API_BASE_URL}/dashboard/`);
     if (!resp) {
@@ -106,6 +213,33 @@ document.addEventListener('DOMContentLoaded', async function () {
       throw new Error('Falha ao carregar dashboard');
     }
     const data = await resp.json();
+
+    // IMPORTANTE: Verificar e processar pagamento quando retornar do Mercado Pago
+    // Verificar sempre que carregar o portal, mas APENAS se não tiver matrícula ativa
+    // Isso garante que mesmo retornando manualmente, o pagamento será verificado
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasPaymentParam = urlParams.get('payment') === 'success';
+    const hasActiveMatricula = data.matricula_ativa !== null && data.matricula_ativa !== undefined;
+    
+    // Só verificar pagamento se NÃO tiver matrícula ativa
+    if (!hasActiveMatricula && !window.paymentVerificationInProgress) {
+      window.paymentVerificationInProgress = true;
+      
+      // Se tiver parâmetro payment=success, verificar imediatamente
+      // Caso contrário, verificar após um pequeno delay (para não interferir no carregamento)
+      if (hasPaymentParam) {
+        console.log('🔍 Parâmetro payment=success detectado, verificando pagamento imediatamente...');
+        verificarPagamentoRetorno();
+      } else {
+        // Verificar automaticamente após 2 segundos (para detectar retorno manual)
+        console.log('🔍 Usuário sem matrícula ativa, verificando pagamentos pendentes automaticamente...');
+        setTimeout(() => {
+          verificarPagamentoRetorno();
+        }, 2000);
+      }
+    } else if (hasActiveMatricula) {
+      console.log('ℹ️ Usuário já possui matrícula ativa, pulando verificação de pagamento');
+    }
 
     // Verificar role do usuário e redirecionar se necessário
     // Mas apenas se estiver na página do aluno (/portal/) e não for aluno

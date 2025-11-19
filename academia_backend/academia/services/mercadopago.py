@@ -29,25 +29,6 @@ class MercadoPagoService:
             self.sdk = None
             logger.info("Mercado Pago configurado para usar MCP (Model Context Protocol)")
     
-    def _call_mcp_tool(self, tool_name, tool_args):
-        """
-        Chama uma ferramenta do MCP do Mercado Pago
-        Fallback para SDK tradicional se MCP não estiver disponível
-        """
-        if self.use_mcp:
-            try:
-                # Tentar usar MCP se disponível
-                # Nota: Esta função seria chamada através do sistema MCP do Cursor
-                # Por enquanto, mantemos o fallback para SDK
-                pass
-            except Exception as e:
-                logger.warning(f"MCP não disponível, usando SDK tradicional: {e}")
-                self.use_mcp = False
-                self.sdk = mercadopago.SDK(self.access_token)
-        
-        # Fallback para SDK tradicional
-        return None
-    
     def _get_sdk(self):
         """Obtém o SDK, inicializando se necessário (fallback do MCP)"""
         if not self.sdk:
@@ -74,19 +55,74 @@ class MercadoPagoService:
             sdk = self._get_sdk()
             
             # URLs de retorno - garantir que sejam URLs válidas
-            base_url = settings.MERCADOPAGO_WEBHOOK_URL.rstrip('/')
-            if not base_url or base_url == 'http://localhost:8000':
-                # Se for localhost, usar URL completa
+            webhook_url = getattr(settings, 'MERCADOPAGO_WEBHOOK_URL', None)
+            if webhook_url:
+                base_url = str(webhook_url).rstrip('/')
+            else:
                 base_url = 'http://localhost:8000'
+            
+            # Garantir que base_url seja válido
+            if not base_url or not base_url.startswith('http'):
+                base_url = 'http://localhost:8000'
+                logger.warning(f"⚠️ MERCADOPAGO_WEBHOOK_URL inválido, usando localhost: {base_url}")
             
             success_url = f"{base_url}/portal/?payment=success"
             failure_url = f"{base_url}/checkout/?pedido_id={pedido.id_publico}&payment=failed"
             pending_url = f"{base_url}/checkout/?pedido_id={pedido.id_publico}&payment=pending"
             
-            # Log para debug - verificar se está usando TEST
-            is_test = "TEST" in self.access_token or "test" in self.access_token.lower()
+            # Validar URLs antes de usar
+            logger.debug(f"URLs de retorno: success={success_url}, failure={failure_url}, pending={pending_url}")
+            
+            # Detectar modo TEST baseado no access_token
+            # Tokens de teste começam com "TEST-" ou contêm "test" no nome
+            # Tokens de produção começam com "APP_USR-"
+            is_test = (
+                self.access_token.startswith("TEST-") or 
+                "TEST-" in self.access_token.upper() or
+                (not self.access_token.startswith("APP_USR-") and "test" in self.access_token.lower())
+            )
+            
+            # Log para debug
+            logger.debug(f"Modo: {'TEST' if is_test else 'PRODUÇÃO'}")
             
             # Preparar dados da preferência
+            # IMPORTANTE: back_urls DEVE ser definido e válido antes de auto_return
+            # O Mercado Pago valida que back_urls.success existe e é válido antes de aceitar auto_return
+            
+            # Validar que success_url está definida e válida ANTES de criar back_urls
+            if not success_url or not success_url.startswith('http'):
+                logger.error(f"❌ ERRO: success_url inválida: {success_url}")
+                raise ValueError(f"URL de sucesso inválida: {success_url}")
+            
+            # Criar back_urls com todas as URLs válidas
+            back_urls = {
+                "success": str(success_url).strip(),  # Garantir que é string e sem espaços
+                "failure": str(failure_url).strip(),
+                "pending": str(pending_url).strip()
+            }
+            
+            # Validar novamente após criar o dicionário
+            if not back_urls.get("success") or not back_urls["success"].startswith('http'):
+                logger.error(f"❌ ERRO: back_urls.success inválida após criação: {back_urls.get('success')}")
+                raise ValueError(f"back_urls.success inválida: {back_urls.get('success')}")
+            
+            logger.debug(f"back_urls criado: success={back_urls['success'][:50]}...")
+            
+            # Verificar se back_urls.success está válida ANTES de criar preference_data
+            success_url_valid = (
+                back_urls.get("success") and 
+                isinstance(back_urls["success"], str) and
+                back_urls["success"].strip().startswith('http') and 
+                len(back_urls["success"].strip()) > 10
+            )
+            
+            if not success_url_valid:
+                logger.error(f"❌ ERRO: back_urls.success inválida antes de criar preference_data")
+                logger.error(f"   Tipo: {type(back_urls.get('success'))}, Valor: {repr(back_urls.get('success'))}")
+                raise ValueError(f"back_urls.success inválida: {back_urls.get('success')}")
+            
+            # Criar preference_data com TODOS os campos de uma vez
+            # O Mercado Pago pode estar validando a estrutura completa, então vamos incluir tudo junto
             preference_data = {
                 "items": [
                     {
@@ -98,34 +134,35 @@ class MercadoPagoService:
                 ],
                 "external_reference": str(pedido.id_publico),
                 "back_urls": {
-                    "success": success_url,
-                    "failure": failure_url,
-                    "pending": pending_url
+                    "success": str(back_urls["success"]).strip(),
+                    "failure": str(back_urls["failure"]).strip(),
+                    "pending": str(back_urls["pending"]).strip()
                 },
                 "notification_url": f"{base_url}/api/payments/mercadopago/webhook/",
                 "statement_descriptor": "ATHLETECH",
-                "binary_mode": False,
+                "binary_mode": False,  # False permite pagamentos pendentes (necessário para PIX e account_money)
                 "expires": False  # Não expirar a preferência
             }
             
-            # Em modo TEST, NÃO incluir payer para evitar redirecionamento para conta do desenvolvedor
-            # O Mercado Pago Sandbox permitirá que qualquer pessoa faça o teste
-            # Em produção, incluir payer com dados reais
-            if not is_test:
-                preference_data["payer"] = {
-                    "email": usuario.email,
-                    "name": f"{usuario.first_name or ''} {usuario.last_name or ''}".strip() or "Cliente",
-                }
-                logger.info(f"Modo PRODUÇÃO: Incluindo payer com email: {usuario.email}")
-            else:
-                logger.info("Modo TEST: Payer não incluído para permitir testes sem redirecionamento")
+            # Adicionar auto_return apenas se NÃO for localhost
+            # O Mercado Pago pode não aceitar auto_return com URLs localhost
+            is_localhost = base_url.startswith('http://localhost') or base_url.startswith('http://127.0.0.1')
             
-            # auto_return só funciona se todas as URLs forem acessíveis publicamente
-            # Para localhost, pode causar erro, então vamos omitir temporariamente
-            # O usuário será redirecionado manualmente após o pagamento
+            if not is_localhost and success_url_valid:
+                preference_data["auto_return"] = "approved"
+                logger.info("✅ auto_return configurado para redirecionamento automático (não é localhost)")
+            else:
+                if is_localhost:
+                    logger.info("ℹ️ auto_return não configurado - localhost detectado (Mercado Pago pode não aceitar)")
+                else:
+                    logger.warning("⚠️ auto_return não configurado - success_url inválida")
+            
+            logger.debug(f"preference_data criado: auto_return={preference_data.get('auto_return', 'não configurado')}")
             
             # Configurar métodos de pagamento permitidos
-            # No modo sandbox, permitir todos os métodos para facilitar testes
+            # IMPORTANTE: account_money (saldo do Mercado Pago) deve estar sempre permitido
+            # Não excluir account_money explicitamente, pois ele é usado tanto para PIX quanto para saldo
+            
             if is_test:
                 # Em modo TEST, permitir todos os métodos para facilitar testes
                 preference_data["payment_methods"] = {
@@ -134,18 +171,23 @@ class MercadoPagoService:
                     "installments": 12
                 }
             elif metodo_pagamento == 'pix':
-                # Para PIX, permitir apenas account_money (PIX) e excluir outros
+                # Para PIX, não configurar payment_methods ou configurar minimamente
+                # O Mercado Pago automaticamente mostra PIX quando account_money está disponível
+                # Excluir apenas cartões e boleto, mas deixar account_money (que inclui PIX e saldo)
+                # Não excluir nenhum payment_method específico para garantir que PIX apareça
                 preference_data["payment_methods"] = {
                     "excluded_payment_types": [
                         {"id": "credit_card"},
                         {"id": "debit_card"},
                         {"id": "ticket"}
                     ],
+                    # Não excluir payment_methods - isso permite PIX aparecer
+                    # O account_money inclui tanto PIX quanto saldo do Mercado Pago
                     "excluded_payment_methods": [],
                     "installments": 1
                 }
             elif metodo_pagamento == 'cartao':
-                # Para cartão, permitir credit_card e debit_card
+                # Para cartão, permitir credit_card, debit_card e account_money (saldo)
                 preference_data["payment_methods"] = {
                     "excluded_payment_types": [
                         {"id": "ticket"}
@@ -154,25 +196,35 @@ class MercadoPagoService:
                     "installments": 12
                 }
             else:
-                # Se não especificar, permitir todos os métodos
+                # Permitir todos os métodos (incluindo account_money)
                 preference_data["payment_methods"] = {
                     "excluded_payment_types": [],
                     "excluded_payment_methods": [],
                     "installments": 12
                 }
-            logger.info(f"Criando preferência - Modo: {'TEST (Sandbox)' if is_test else 'PRODUÇÃO'}")
-            logger.debug(f"Access Token começa com: {self.access_token[:10]}...")
-            logger.debug(f"Base URL: {base_url}")
-            logger.debug(f"Success URL: {success_url}")
+            # Validar estrutura antes de enviar
+            if not preference_data.get('back_urls', {}).get('success'):
+                raise ValueError("back_urls.success não está definido ou está vazio")
+            
+            # Se auto_return estiver presente, garantir que success_url está válida
+            if 'auto_return' in preference_data:
+                success_url_final = preference_data.get('back_urls', {}).get('success', '')
+                if not success_url_final or not success_url_final.startswith('http') or len(success_url_final) < 10:
+                    del preference_data['auto_return']
+                    logger.warning("auto_return removido - success_url inválida")
             
             # Criar preferência
-            preference_response = sdk.preference().create(preference_data)
+            try:
+                preference_response = sdk.preference().create(preference_data)
+            except Exception as e:
+                logger.error(f"Exceção ao criar preferência: {str(e)}")
+                raise
             
             if preference_response["status"] == 201:
                 preference = preference_response["response"]
                 preference_id = preference.get("id")
                 
-                logger.info(f"Preferência criada com sucesso - ID: {preference_id}")
+                logger.info(f"Preferência criada - ID: {preference_id}")
                 
                 # Atualizar pedido com preference_id
                 pedido.mercado_pago_preference_id = str(preference_id)
@@ -182,32 +234,19 @@ class MercadoPagoService:
                 init_point = preference.get("init_point", "")
                 sandbox_init_point = preference.get("sandbox_init_point", "")
                 
-                # Log detalhado para debug
-                logger.info(f"init_point recebido: {init_point[:80] if init_point else 'VAZIO'}...")
-                logger.info(f"sandbox_init_point recebido: {sandbox_init_point[:80] if sandbox_init_point else 'VAZIO'}...")
-                
-                # Usar sandbox_init_point em desenvolvimento, init_point em produção
-                use_sandbox = is_test
-                
-                # Priorizar sandbox_init_point se estiver em modo TEST
-                if use_sandbox:
-                    if sandbox_init_point:
-                        redirect_url = sandbox_init_point
-                        logger.info("Usando sandbox_init_point (modo TEST)")
-                    elif init_point:
-                        # Se não tiver sandbox_init_point, usar init_point mesmo em TEST
-                        redirect_url = init_point
-                        logger.warning("sandbox_init_point não disponível, usando init_point em modo TEST")
-                    else:
-                        logger.error("Nenhum init_point disponível!")
+                # Em modo TEST, SEMPRE usar sandbox_init_point
+                # Em modo PRODUÇÃO, SEMPRE usar init_point
+                # Isso evita o erro "Uma das partes é de teste"
+                if is_test:
+                    redirect_url = sandbox_init_point or init_point
+                    if not redirect_url:
+                        logger.error("Nenhum init_point disponível em modo TEST")
                         return None
                 else:
-                    redirect_url = init_point if init_point else sandbox_init_point
-                    logger.info("Usando init_point (modo PRODUÇÃO)")
-                
-                logger.info(f"URL final de redirecionamento: {redirect_url[:100]}...")
-                logger.info(f"URL contém 'sandbox'? {'sandbox' in redirect_url.lower()}")
-                logger.info(f"URL contém 'test'? {'test' in redirect_url.lower()}")
+                    redirect_url = init_point or sandbox_init_point
+                    if not redirect_url:
+                        logger.error("Nenhum init_point disponível em modo PRODUÇÃO")
+                        return None
                 
                 return {
                     "preference_id": preference.get("id"),
@@ -216,9 +255,9 @@ class MercadoPagoService:
                 }
             else:
                 error_detail = preference_response.get("response", {})
-                logger.error(f"Erro ao criar preferência - Status: {preference_response.get('status')}")
-                logger.error(f"Erro detalhado: {error_detail}")
-                return None
+                error_message = error_detail.get("message", "Erro desconhecido")
+                logger.error(f"Erro ao criar preferência: {error_message}")
+                raise ValueError(f"Erro ao criar preferência no Mercado Pago: {error_message}")
                 
         except Exception as e:
             logger.error(f"Exceção ao criar preferência: {str(e)}")
@@ -257,7 +296,7 @@ class MercadoPagoService:
                     "email": usuario.email,
                 },
                 "external_reference": str(pedido.id_publico),
-                "notification_url": f"{settings.MERCADOPAGO_WEBHOOK_URL}/api/payments/mercadopago/webhook/",
+                "notification_url": f"{getattr(settings, 'MERCADOPAGO_WEBHOOK_URL', 'http://localhost:8000')}/api/payments/mercadopago/webhook/",
                 "statement_descriptor": "ATHLETECH"
             }
             
@@ -306,6 +345,64 @@ class MercadoPagoService:
                 
         except Exception as e:
             logger.error(f"Exceção ao consultar pagamento: {str(e)}")
+            return None
+    
+    def buscar_pagamentos_por_preference(self, preference_id):
+        """
+        Busca pagamentos relacionados a uma preferência (Checkout Pro)
+        
+        Args:
+            preference_id: ID da preferência no Mercado Pago
+            
+        Returns:
+            list: Lista de pagamentos ou None
+        """
+        try:
+            sdk = self._get_sdk()
+            # Buscar pagamentos usando filtro de preference_id
+            filters = {"preference_id": preference_id}
+            search_response = sdk.payment().search(filters=filters)
+            
+            if search_response["status"] == 200:
+                results = search_response.get("response", {})
+                payments = results.get("results", [])
+                logger.info(f"Encontrados {len(payments)} pagamento(s) para preference_id: {preference_id}")
+                return payments
+            else:
+                logger.error(f"Erro ao buscar pagamentos por preference: {search_response}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Exceção ao buscar pagamentos por preference: {str(e)}")
+            return None
+    
+    def buscar_pagamentos_por_external_reference(self, external_reference):
+        """
+        Busca pagamentos por external_reference (ID público do pedido)
+        
+        Args:
+            external_reference: ID público do pedido (UUID)
+            
+        Returns:
+            list: Lista de pagamentos ou None
+        """
+        try:
+            sdk = self._get_sdk()
+            # Buscar pagamentos usando filtro de external_reference
+            filters = {"external_reference": str(external_reference)}
+            search_response = sdk.payment().search(filters=filters)
+            
+            if search_response["status"] == 200:
+                results = search_response.get("response", {})
+                payments = results.get("results", [])
+                logger.info(f"Encontrados {len(payments)} pagamento(s) para external_reference: {external_reference}")
+                return payments
+            else:
+                logger.error(f"Erro ao buscar pagamentos por external_reference: {search_response}")
+                return None
+                
+        except Exception as e:
+            logger.error(f"Exceção ao buscar pagamentos por external_reference: {str(e)}")
             return None
     
     def criar_assinatura(self, pedido, usuario, plano, token=None, payment_method_id="visa"):
@@ -437,14 +534,18 @@ class MercadoPagoService:
                                     pass
                             if pedido:
                                 external_ref = str(pedido.id_publico)
-                                # Atualizar com o payment_id real
+                                # IMPORTANTE: Atualizar com o payment_id real se ainda não estiver salvo
                                 payment_id = payment.get("id")
                                 if payment_id:
                                     try:
-                                        pedido.mercado_pago_payment_id = int(payment_id) if str(payment_id).isdigit() else None
-                                    except (ValueError, TypeError):
-                                        pass
+                                        payment_id_int = int(payment_id) if str(payment_id).isdigit() else None
+                                        if payment_id_int and not pedido.mercado_pago_payment_id:
+                                            pedido.mercado_pago_payment_id = payment_id_int
+                                            logger.info(f"Payment ID {payment_id_int} salvo no pedido {pedido.id_publico}")
+                                    except (ValueError, TypeError) as e:
+                                        logger.warning(f"Erro ao converter payment_id: {e}")
                                     pedido.mercado_pago_status = payment.get("status")
+                                    pedido.mercado_pago_status_detail = payment.get("status_detail", "")
                                     pedido.save()
                         except Exception as e:
                             logger.warning(f"Erro ao buscar pedido por preference_id: {e}")
@@ -470,7 +571,7 @@ class MercadoPagoService:
                 return {
                     "success": True,
                     "type": "payment",
-                    "payment_id": data_id,
+                    "payment_id": data_id,  # ID do pagamento do Mercado Pago
                     "status": payment.get("status"),
                     "status_detail": payment.get("status_detail"),
                     "external_reference": external_ref or payment.get("external_reference"),
