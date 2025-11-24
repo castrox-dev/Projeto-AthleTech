@@ -205,11 +205,23 @@ Configurado para aceitar requisições de:
 
 ## 🚀 Deploy
 
+### Deploy no Railway (Recomendado)
+
+O projeto está configurado para deploy no Railway. Veja o guia completo em:
+- **[RAILWAY_DEPLOY.md](RAILWAY_DEPLOY.md)** - Guia passo a passo para deploy no Railway
+
+**Resumo rápido:**
+1. Conecte seu repositório no Railway
+2. Configure o Root Directory como `academia_backend`
+3. Adicione um banco PostgreSQL
+4. Configure as variáveis de ambiente (veja `.env.example`)
+5. O deploy é automático!
+
 ### Variáveis de Ambiente para Produção
 ```env
 DEBUG=False
 SECRET_KEY=sua-secret-key-segura
-ALLOWED_HOSTS=seu-dominio.com
+ALLOWED_HOSTS=*.railway.app,seu-dominio.com
 DATABASE_URL=sua-url-do-banco
 DB_SSL_REQUIRE=True
 SECURE_SSL_REDIRECT=True
@@ -217,10 +229,15 @@ SECURE_SSL_REDIRECT=True
 
 ### Comandos de Deploy
 ```bash
-python manage.py collectstatic
+python manage.py collectstatic --noinput
 python manage.py migrate
 gunicorn academia_project.wsgi:application
 ```
+
+### Outras Plataformas
+
+Veja o guia completo de deploy em:
+- **[DEPLOY.md](DEPLOY.md)** - Guia geral de deploy (Heroku, Railway, Render)
 
 ## 📞 Suporte
 

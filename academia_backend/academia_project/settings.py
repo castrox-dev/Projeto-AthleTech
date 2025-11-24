@@ -71,34 +71,48 @@ TEMPLATES = [
 WSGI_APPLICATION = 'academia_project.wsgi.application'
 
 # Database
-# Configuração padrão para PostgreSQL (Neon)
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': 'neondb',
-        'USER': 'neondb_owner',
-        'PASSWORD': 'npg_fnLJ8i7aeTPy',
-        'HOST': 'ep-rapid-firefly-ac6hfh6q-pooler.sa-east-1.aws.neon.tech',
-        'PORT': '5432',
-        'OPTIONS': {
-            'sslmode': 'require',
-            'channel_binding': 'require',
-        },
-    }
-}
-
-# Allow DATABASE_URL override (e.g., Postgres in production)
+# Configuração usando DATABASE_URL (recomendado para produção)
+# Ou configuração individual via variáveis de ambiente
 DATABASE_URL = config('DATABASE_URL', default='')
 if DATABASE_URL and DATABASE_URL.strip():
     try:
-        DATABASES['default'] = dj_database_url.parse(
-            DATABASE_URL,
-            conn_max_age=600,
-            ssl_require=config('DB_SSL_REQUIRE', default=True, cast=bool)
-        )
-    except Exception:
-        # Se falhar ao fazer parse, manter configuração padrão
-        pass
+        DATABASES = {
+            'default': dj_database_url.parse(
+                DATABASE_URL,
+                conn_max_age=600,
+                ssl_require=config('DB_SSL_REQUIRE', default=True, cast=bool)
+            )
+        }
+    except Exception as e:
+        # Se falhar ao fazer parse, usar configuração individual
+        DATABASES = {
+            'default': {
+                'ENGINE': 'django.db.backends.postgresql',
+                'NAME': config('DB_NAME', default=''),
+                'USER': config('DB_USER', default=''),
+                'PASSWORD': config('DB_PASSWORD', default=''),
+                'HOST': config('DB_HOST', default='localhost'),
+                'PORT': config('DB_PORT', default='5432'),
+                'OPTIONS': {
+                    'sslmode': config('DB_SSLMODE', default='require'),
+                },
+            }
+        }
+else:
+    # Configuração individual via variáveis de ambiente
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': config('DB_NAME', default=''),
+            'USER': config('DB_USER', default=''),
+            'PASSWORD': config('DB_PASSWORD', default=''),
+            'HOST': config('DB_HOST', default='localhost'),
+            'PORT': config('DB_PORT', default='5432'),
+            'OPTIONS': {
+                'sslmode': config('DB_SSLMODE', default='require'),
+            },
+        }
+    }
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
