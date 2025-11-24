@@ -6,15 +6,13 @@ nixPkgs = ["python311"]
 
 [phases.install]
 cmds = [
-    "cd academia_backend",
-    "pip install --upgrade pip",
-    "pip install -r requirements.txt"
+    "cd academia_backend && python -m pip install --upgrade pip",
+    "cd academia_backend && python -m pip install -r requirements.txt"
 ]
 
 [phases.build]
 cmds = [
-    "cd academia_backend",
-    "python manage.py collectstatic --noinput"
+    "cd academia_backend && python manage.py collectstatic --noinput"
 ]
 
 [start]
