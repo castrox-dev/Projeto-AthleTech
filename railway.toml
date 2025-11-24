@@ -1,0 +1,11 @@
+# Configuração do Railway na raiz do repositório
+# Este arquivo indica ao Railway que o projeto está em academia_backend/
+
+[build]
+builder = "NIXPACKS"
+
+[deploy]
+startCommand = "cd academia_backend && bash start.sh"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+

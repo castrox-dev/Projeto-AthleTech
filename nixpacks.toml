@@ -1,0 +1,22 @@
+# Configuração Nixpacks na raiz do repositório
+# Este arquivo indica ao Railway que o projeto Django está em academia_backend/
+
+[phases.setup]
+nixPkgs = ["python311", "pip"]
+
+[phases.install]
+cmds = [
+    "cd academia_backend",
+    "pip install --upgrade pip",
+    "pip install -r requirements.txt"
+]
+
+[phases.build]
+cmds = [
+    "cd academia_backend",
+    "python manage.py collectstatic --noinput"
+]
+
+[start]
+cmd = "cd academia_backend && bash start.sh"
+
