@@ -1,5 +1,4 @@
 # Configuração do Railway para o projeto AthleTech
-# Este arquivo é opcional - o Railway detecta automaticamente projetos Django
 # IMPORTANTE: Configure o Root Directory como "academia_backend" no painel do Railway
 
 [build]
