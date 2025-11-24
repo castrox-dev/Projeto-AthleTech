@@ -6,8 +6,7 @@ nixPkgs = ["python311", "python311Packages.pip"]
 
 [phases.install]
 cmds = [
-    "cd academia_backend && pip install --upgrade pip",
-    "cd academia_backend && pip install -r requirements.txt"
+    "cd academia_backend && pip install --user -r requirements.txt"
 ]
 
 [phases.build]
