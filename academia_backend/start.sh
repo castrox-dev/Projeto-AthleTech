@@ -4,9 +4,12 @@
 
 echo "🚀 Iniciando aplicação AthleTech..."
 
-# Iniciar o servidor Gunicorn
+# Adicionar diretórios do Python ao PATH (para ambientes Nix)
+export PATH="$HOME/.local/bin:/nix/store/*/bin:$PATH"
+
+# Usar python -m gunicorn que sempre funciona quando gunicorn está instalado
 echo "🌐 Iniciando servidor Gunicorn na porta ${PORT:-8000}..."
-exec gunicorn academia_project.wsgi:application \
+exec python -m gunicorn academia_project.wsgi:application \
     --bind 0.0.0.0:${PORT:-8000} \
     --workers ${WEB_CONCURRENCY:-2} \
     --timeout 120 \
