@@ -2,7 +2,7 @@
 # Este arquivo ajuda o Railway a detectar e construir o projeto Django corretamente
 
 [phases.setup]
-nixPkgs = ["python311", "pip"]
+nixPkgs = ["python311"]
 
 [phases.install]
 cmds = [
