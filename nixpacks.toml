@@ -2,12 +2,12 @@
 # Este arquivo indica ao Railway que o projeto Django está em academia_backend/
 
 [phases.setup]
-nixPkgs = ["python311"]
+nixPkgs = ["python311", "python311Packages.pip"]
 
 [phases.install]
 cmds = [
-    "cd academia_backend && python -m pip install --upgrade pip",
-    "cd academia_backend && python -m pip install -r requirements.txt"
+    "cd academia_backend && pip install --upgrade pip",
+    "cd academia_backend && pip install -r requirements.txt"
 ]
 
 [phases.build]
