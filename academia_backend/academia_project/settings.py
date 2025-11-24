@@ -10,11 +10,26 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = config('SECRET_KEY', default='dev-secret-key-change-me')
 DEBUG = config('DEBUG', default=True, cast=bool)
+
+# ALLOWED_HOSTS - aceita domínios do Railway automaticamente
 ALLOWED_HOSTS = config(
     'ALLOWED_HOSTS',
     default='localhost,127.0.0.1,testserver',
     cast=lambda v: [h.strip() for h in v.split(',') if h.strip()]
 )
+
+# Adicionar domínio do Railway se fornecido via variável de ambiente
+railway_domain = config('RAILWAY_PUBLIC_DOMAIN', default='')
+if railway_domain and railway_domain not in ALLOWED_HOSTS:
+    ALLOWED_HOSTS.append(railway_domain)
+
+# Se estiver rodando no Railway (detectado pela variável PORT),
+# aceitar qualquer domínio .railway.app e .up.railway.app
+# Isso é seguro porque o Railway isola os containers
+if os.environ.get('PORT') or os.environ.get('RAILWAY_ENVIRONMENT'):
+    # Em produção no Railway, vamos usar uma validação customizada
+    # O middleware RailwayHostMiddleware vai permitir domínios do Railway
+    pass
 
 # Application definition
 INSTALLED_APPS = [
@@ -41,6 +56,7 @@ MIDDLEWARE = [
     'whitenoise.middleware.WhiteNoiseMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
+    'academia.middleware.RailwayHostMiddleware',  # Aceita domínios do Railway automaticamente
     'academia.middleware.DisableCSRFForAPI',  # Desabilita CSRF para rotas /api/
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
