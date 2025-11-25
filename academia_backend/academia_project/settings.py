@@ -18,6 +18,11 @@ ALLOWED_HOSTS = config(
     cast=lambda v: [h.strip() for h in v.split(',') if h.strip()]
 )
 
+# Garantir que localhost e 127.0.0.1 sempre estejam na lista (desenvolvimento)
+for host in ['localhost', '127.0.0.1']:
+    if host not in ALLOWED_HOSTS:
+        ALLOWED_HOSTS.append(host)
+
 # Adicionar domínio do Railway se fornecido via variável de ambiente
 railway_domain = config('RAILWAY_PUBLIC_DOMAIN', default='')
 if railway_domain and railway_domain not in ALLOWED_HOSTS:

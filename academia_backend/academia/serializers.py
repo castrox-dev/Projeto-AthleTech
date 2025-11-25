@@ -115,12 +115,17 @@ class TreinoExercicioSerializer(serializers.ModelSerializer):
     
     exercicio_nome = serializers.CharField(source='exercicio.nome', read_only=True)
     exercicio_categoria = serializers.CharField(source='exercicio.categoria', read_only=True)
+    exercicio_video_url = serializers.CharField(source='exercicio.video_url', read_only=True)
+    exercicio_instrucoes = serializers.CharField(source='exercicio.instrucoes', read_only=True)
+    exercicio_descricao = serializers.CharField(source='exercicio.descricao', read_only=True)
+    exercicio_equipamento = serializers.CharField(source='exercicio.equipamento', read_only=True)
     
     class Meta:
         model = TreinoExercicio
         fields = [
             'id', 'exercicio', 'exercicio_nome', 'exercicio_categoria',
-            'series', 'repeticoes', 'peso', 'tempo_descanso',
+            'exercicio_video_url', 'exercicio_instrucoes', 'exercicio_descricao',
+            'exercicio_equipamento', 'series', 'repeticoes', 'peso', 'tempo_descanso',
             'observacoes', 'ordem'
         ]
 

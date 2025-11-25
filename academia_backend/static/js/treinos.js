@@ -158,6 +158,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         treino.exercicios_detalhes.forEach((ex, index) => {
           const exerciseCard = document.createElement('div');
           exerciseCard.className = 'exercise-card';
+          exerciseCard.setAttribute('data-exercise', JSON.stringify(ex));
           
           const exerciseTitle = document.createElement('h4');
           exerciseTitle.textContent = `${index + 1}. ${ex.exercicio_nome}`;
@@ -190,6 +191,19 @@ document.addEventListener('DOMContentLoaded', async function() {
             observacoes.innerHTML = `<strong>Observações:</strong> ${ex.observacoes}`;
             exerciseCard.appendChild(observacoes);
           }
+          
+          // Botão para ver detalhes/vídeo
+          const verDetalhes = document.createElement('div');
+          verDetalhes.className = 'ver-detalhes';
+          if (ex.exercicio_video_url) {
+            verDetalhes.innerHTML = `<i class="fa-solid fa-play-circle"></i> Ver vídeo do exercício`;
+          } else {
+            verDetalhes.innerHTML = `<i class="fa-solid fa-eye"></i> Ver detalhes`;
+          }
+          exerciseCard.appendChild(verDetalhes);
+          
+          // Evento de clique para abrir modal
+          exerciseCard.addEventListener('click', () => openExerciseModal(ex));
           
           exerciciosGrid.appendChild(exerciseCard);
         });
@@ -232,5 +246,155 @@ document.addEventListener('DOMContentLoaded', async function() {
       window.location.href = '/login/?message=logout_success';
     });
   }
+
+  // ============================================
+  // MODAL DE EXERCÍCIO - Funções e Handlers
+  // ============================================
+  
+  const modal = document.getElementById('exercise-modal');
+  const modalCloseBtn = document.getElementById('modal-close-btn');
+  const videoContainer = document.getElementById('video-container');
+  const videoPlaceholder = document.getElementById('video-placeholder');
+  
+  // Função para extrair ID do vídeo do YouTube
+  function getYouTubeVideoId(url) {
+    if (!url) return null;
+    
+    // Padrões de URLs do YouTube
+    const patterns = [
+      /(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?\s]+)/,
+      /youtube\.com\/shorts\/([^&?\s]+)/
+    ];
+    
+    for (const pattern of patterns) {
+      const match = url.match(pattern);
+      if (match && match[1]) {
+        // Remover parâmetros extras do ID
+        return match[1].split('?')[0].split('&')[0];
+      }
+    }
+    return null;
+  }
+  
+  // Função para abrir o modal com os dados do exercício
+  window.openExerciseModal = function(exercise) {
+    // Nome do exercício
+    document.getElementById('modal-exercise-name').textContent = exercise.exercicio_nome;
+    
+    // Vídeo
+    const videoId = getYouTubeVideoId(exercise.exercicio_video_url);
+    if (videoId) {
+      // Usar youtube-nocookie.com para melhor compatibilidade
+      // Adicionar origin para evitar erros de embed
+      const embedUrl = `https://www.youtube-nocookie.com/embed/${videoId}?rel=0&modestbranding=1&playsinline=1`;
+      const youtubeUrl = `https://www.youtube.com/watch?v=${videoId}`;
+      
+      videoContainer.innerHTML = `
+        <iframe 
+          src="${embedUrl}" 
+          title="${exercise.exercicio_nome}"
+          allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share" 
+          referrerpolicy="strict-origin-when-cross-origin"
+          allowfullscreen>
+        </iframe>
+        <a href="${youtubeUrl}" target="_blank" class="youtube-fallback-link" title="Abrir no YouTube">
+          <i class="fa-brands fa-youtube"></i> Abrir no YouTube
+        </a>
+      `;
+    } else {
+      videoContainer.innerHTML = `
+        <div class="video-placeholder">
+          <i class="fa-solid fa-video-slash"></i>
+          <p>Vídeo não disponível para este exercício</p>
+        </div>
+      `;
+    }
+    
+    // Stats (séries, repetições, peso, descanso)
+    const statsContainer = document.getElementById('exercise-stats');
+    let statsHtml = '';
+    
+    if (exercise.series) {
+      statsHtml += `<div class="stat"><div class="value">${exercise.series}</div><div class="label">Séries</div></div>`;
+    }
+    if (exercise.repeticoes) {
+      statsHtml += `<div class="stat"><div class="value">${exercise.repeticoes}</div><div class="label">Repetições</div></div>`;
+    }
+    if (exercise.peso) {
+      statsHtml += `<div class="stat"><div class="value">${exercise.peso}</div><div class="label">Kg</div></div>`;
+    }
+    if (exercise.tempo_descanso) {
+      statsHtml += `<div class="stat"><div class="value">${exercise.tempo_descanso}s</div><div class="label">Descanso</div></div>`;
+    }
+    
+    statsContainer.innerHTML = statsHtml;
+    
+    // Instruções
+    const instrucoesEl = document.getElementById('modal-instrucoes');
+    const instrucoesGroup = document.getElementById('detail-instrucoes');
+    if (exercise.exercicio_instrucoes) {
+      instrucoesEl.textContent = exercise.exercicio_instrucoes;
+      instrucoesGroup.style.display = 'block';
+    } else {
+      instrucoesGroup.style.display = 'none';
+    }
+    
+    // Equipamento
+    const equipamentoEl = document.getElementById('modal-equipamento');
+    const equipamentoGroup = document.getElementById('detail-equipamento');
+    if (exercise.exercicio_equipamento && exercise.exercicio_equipamento !== 'Nenhum') {
+      equipamentoEl.textContent = exercise.exercicio_equipamento;
+      equipamentoGroup.style.display = 'block';
+    } else {
+      equipamentoGroup.style.display = 'none';
+    }
+    
+    // Observações do professor
+    const observacoesEl = document.getElementById('modal-observacoes');
+    const observacoesGroup = document.getElementById('detail-observacoes');
+    if (exercise.observacoes) {
+      observacoesEl.textContent = exercise.observacoes;
+      observacoesGroup.style.display = 'block';
+    } else {
+      observacoesGroup.style.display = 'none';
+    }
+    
+    // Abrir modal
+    modal.classList.add('active');
+    document.body.style.overflow = 'hidden'; // Prevenir scroll do body
+  };
+  
+  // Função para fechar o modal
+  function closeExerciseModal() {
+    modal.classList.remove('active');
+    document.body.style.overflow = '';
+    
+    // Parar vídeo ao fechar (limpar iframe)
+    const iframe = videoContainer.querySelector('iframe');
+    if (iframe) {
+      iframe.src = '';
+    }
+  }
+  
+  // Event listeners para fechar modal
+  if (modalCloseBtn) {
+    modalCloseBtn.addEventListener('click', closeExerciseModal);
+  }
+  
+  if (modal) {
+    // Fechar ao clicar fora do conteúdo
+    modal.addEventListener('click', function(e) {
+      if (e.target === modal) {
+        closeExerciseModal();
+      }
+    });
+  }
+  
+  // Fechar com tecla ESC
+  document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+      closeExerciseModal();
+    }
+  });
 });
 

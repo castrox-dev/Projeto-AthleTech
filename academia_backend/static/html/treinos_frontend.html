@@ -11,31 +11,31 @@
   <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <style>
+    /* Tema escuro consistente com o portal */
     .treinos-page {
       max-width: 1200px;
       margin: 0 auto;
       padding: 2rem 1rem;
     }
     .treino-card {
-      background: white;
-      border-radius: 12px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 16px;
       padding: 2rem;
       margin-bottom: 2rem;
-      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-      border: 1px solid #e0e0e0;
+      border: 1px solid rgba(255, 255, 255, 0.08);
     }
     .treino-header {
-      border-bottom: 2px solid #f0f0f0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
       padding-bottom: 1rem;
       margin-bottom: 1.5rem;
     }
     .treino-header h2 {
       margin: 0 0 0.5rem 0;
-      color: #333;
+      color: #e5e7eb;
       font-size: 1.5rem;
     }
     .treino-header .muted {
-      color: #666;
+      color: rgba(255, 255, 255, 0.6);
       font-size: 0.9rem;
     }
     .exercicios-grid {
@@ -44,14 +44,17 @@
       gap: 1rem;
     }
     .exercise-card {
-      background: #f9f9f9;
-      border-radius: 8px;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 12px;
       padding: 1.25rem;
-      border-left: 4px solid #4CAF50;
+      border-left: 4px solid rgb(0, 31, 84);
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      border-right: 1px solid rgba(255, 255, 255, 0.08);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
     }
     .exercise-card h4 {
       margin: 0 0 0.75rem 0;
-      color: #333;
+      color: #e5e7eb;
       font-size: 1.1rem;
     }
     .exercise-info {
@@ -59,43 +62,252 @@
       flex-wrap: wrap;
       gap: 0.75rem;
       font-size: 0.9rem;
-      color: #666;
+      color: rgba(255, 255, 255, 0.7);
       margin-bottom: 0.5rem;
     }
     .exercise-info span {
-      background: #e8e8e8;
+      background: rgba(0, 31, 84, 0.5);
       padding: 0.25rem 0.75rem;
       border-radius: 4px;
+      color: #e5e7eb;
     }
     .exercise-observacoes {
       margin-top: 0.75rem;
       padding-top: 0.75rem;
-      border-top: 1px solid #e0e0e0;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
       font-size: 0.875rem;
-      color: #666;
+      color: rgba(255, 255, 255, 0.6);
       font-style: italic;
+    }
+    .exercise-card {
+      cursor: pointer;
+      transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
+    }
+    .exercise-card:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 24px rgba(0, 31, 84, 0.3);
+      border-color: rgb(0, 49, 133);
+    }
+    .exercise-card .ver-detalhes {
+      display: flex;
+      align-items: center;
+      gap: 0.5rem;
+      margin-top: 0.75rem;
+      color: rgb(100, 149, 237);
+      font-size: 0.85rem;
+      font-weight: 500;
+    }
+    .exercise-card .ver-detalhes i {
+      font-size: 1rem;
+    }
+    
+    /* Modal de Exercício - Tema Escuro */
+    .modal-overlay {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+      padding: 1rem;
+    }
+    .modal-overlay.active {
+      display: flex;
+    }
+    .modal-content {
+      background: #0b0d12;
+      border-radius: 16px;
+      max-width: 800px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 1.5rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      background: linear-gradient(135deg, rgb(0, 31, 84), rgb(0, 49, 133));
+      color: white;
+      border-radius: 16px 16px 0 0;
+    }
+    .modal-header h3 {
+      margin: 0;
+      font-size: 1.25rem;
+    }
+    .modal-close {
+      background: rgba(255,255,255,0.2);
+      border: none;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      cursor: pointer;
+      font-size: 1.25rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s;
+    }
+    .modal-close:hover {
+      background: rgba(255,255,255,0.3);
+    }
+    .modal-body {
+      padding: 1.5rem;
+      background: #0b0d12;
+    }
+    .video-container {
+      position: relative;
+      width: 100%;
+      padding-bottom: 56.25%; /* 16:9 Aspect Ratio */
+      margin-bottom: 1.5rem;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #000;
+    }
+    .video-container iframe {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      border: none;
+    }
+    .video-placeholder {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: #666;
+      background: #1a1a1a;
+    }
+    .video-placeholder i {
+      font-size: 3rem;
+      margin-bottom: 1rem;
+    }
+    .youtube-fallback-link {
+      position: absolute;
+      bottom: 10px;
+      right: 10px;
+      background: rgba(255, 0, 0, 0.9);
+      color: white;
+      padding: 8px 16px;
+      border-radius: 6px;
+      text-decoration: none;
+      font-size: 0.85rem;
+      font-weight: 500;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      z-index: 10;
+    }
+    .youtube-fallback-link:hover {
+      background: rgba(255, 0, 0, 1);
+      color: white;
+    }
+    .youtube-fallback-link i {
+      font-size: 1.1rem;
+    }
+    .exercise-details {
+      display: grid;
+      gap: 1rem;
+    }
+    .exercise-details .detail-group {
+      padding: 1rem;
+      background: rgba(255, 255, 255, 0.03);
+      border-radius: 8px;
+      border: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    .exercise-details .detail-group h4 {
+      margin: 0 0 0.5rem 0;
+      color: rgb(100, 149, 237);
+      font-size: 0.9rem;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    .exercise-details .detail-group p {
+      margin: 0;
+      color: #e5e7eb;
+      line-height: 1.6;
+    }
+    .exercise-stats {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 1rem;
+      margin-bottom: 1rem;
+    }
+    .exercise-stats .stat {
+      background: linear-gradient(135deg, rgb(0, 31, 84), rgb(0, 49, 133));
+      color: white;
+      padding: 0.75rem 1.25rem;
+      border-radius: 8px;
+      text-align: center;
+      min-width: 80px;
+    }
+    .exercise-stats .stat .value {
+      font-size: 1.5rem;
+      font-weight: 700;
+    }
+    .exercise-stats .stat .label {
+      font-size: 0.75rem;
+      opacity: 0.9;
+      text-transform: uppercase;
+    }
+    @media (max-width: 600px) {
+      .modal-content {
+        max-height: 95vh;
+        border-radius: 12px;
+      }
+      .modal-header {
+        border-radius: 12px 12px 0 0;
+        padding: 1rem;
+      }
+      .modal-body {
+        padding: 1rem;
+      }
+      .exercise-stats .stat {
+        flex: 1;
+        min-width: 70px;
+      }
     }
     .empty-state {
       text-align: center;
       padding: 4rem 2rem;
-      color: #666;
+      color: rgba(255, 255, 255, 0.6);
     }
     .empty-state i {
       font-size: 4rem;
-      color: #ccc;
+      color: rgba(255, 255, 255, 0.3);
       margin-bottom: 1rem;
+    }
+    .empty-state h3 {
+      color: #e5e7eb;
     }
     .back-link {
       display: inline-flex;
       align-items: center;
       gap: 0.5rem;
-      color: #4CAF50;
+      color: rgb(100, 149, 237);
       text-decoration: none;
       margin-bottom: 2rem;
       font-weight: 500;
     }
     .back-link:hover {
       text-decoration: underline;
+      color: rgb(130, 170, 255);
     }
     @media (max-width: 768px) {
       .exercicios-grid {
@@ -131,6 +343,45 @@
       <div class="empty-state" id="loading-state">
         <i class="fa-solid fa-spinner fa-spin"></i>
         <p>Carregando seus treinos...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Modal de Exercício -->
+  <div class="modal-overlay" id="exercise-modal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h3 id="modal-exercise-name">Nome do Exercício</h3>
+        <button class="modal-close" id="modal-close-btn">
+          <i class="fa-solid fa-times"></i>
+        </button>
+      </div>
+      <div class="modal-body">
+        <div class="video-container" id="video-container">
+          <div class="video-placeholder" id="video-placeholder">
+            <i class="fa-solid fa-video-slash"></i>
+            <p>Vídeo não disponível para este exercício</p>
+          </div>
+        </div>
+        
+        <div class="exercise-stats" id="exercise-stats">
+          <!-- Stats serão inseridos via JS -->
+        </div>
+        
+        <div class="exercise-details">
+          <div class="detail-group" id="detail-instrucoes">
+            <h4><i class="fa-solid fa-list-check"></i> Como Executar</h4>
+            <p id="modal-instrucoes">-</p>
+          </div>
+          <div class="detail-group" id="detail-equipamento" style="display:none;">
+            <h4><i class="fa-solid fa-dumbbell"></i> Equipamento</h4>
+            <p id="modal-equipamento">-</p>
+          </div>
+          <div class="detail-group" id="detail-observacoes" style="display:none;">
+            <h4><i class="fa-solid fa-comment"></i> Observações do Professor</h4>
+            <p id="modal-observacoes">-</p>
+          </div>
+        </div>
       </div>
     </div>
   </div>
