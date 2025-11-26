@@ -630,40 +630,40 @@
   const carregarFormCriarTorneio = () => {
     const formContainer = document.getElementById('form-criar-torneio');
     formContainer.innerHTML = `
-      <form id="form-novo-torneio" class="resultado-form">
-        <div>
+      <form id="form-novo-torneio">
+        <div class="field">
           <label>Nome do Torneio *</label>
           <input type="text" id="torneio-nome" required placeholder="Ex: Campeonato de Força 2024">
         </div>
-        <div>
+        <div class="field">
           <label>Descrição *</label>
           <textarea id="torneio-descricao" rows="3" required placeholder="Descreva o torneio..."></textarea>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div>
+        <div class="grid-2">
+          <div class="field">
             <label>Data de Início das Inscrições *</label>
             <input type="datetime-local" id="torneio-inicio-inscricoes" required>
           </div>
-          <div>
+          <div class="field">
             <label>Data de Fim das Inscrições *</label>
             <input type="datetime-local" id="torneio-fim-inscricoes" required>
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div>
+        <div class="grid-2">
+          <div class="field">
             <label>Data de Início do Torneio *</label>
             <input type="datetime-local" id="torneio-inicio" required>
           </div>
-          <div>
+          <div class="field">
             <label>Data de Fim do Torneio</label>
             <input type="datetime-local" id="torneio-fim">
           </div>
         </div>
-        <div>
+        <div class="field">
           <label>Máximo de Participantes *</label>
           <input type="number" id="torneio-max-participantes" min="2" value="16" required>
         </div>
-        <div>
+        <div class="field">
           <label>Status *</label>
           <select id="torneio-status" required>
             <option value="inscricoes_abertas">Inscrições Abertas</option>
@@ -672,11 +672,11 @@
             <option value="cancelado">Cancelado</option>
           </select>
         </div>
-        <div>
+        <div class="field">
           <label>Regras</label>
           <textarea id="torneio-regras" rows="4" placeholder="Regras do torneio..."></textarea>
         </div>
-        <div>
+        <div class="field">
           <label>Prêmio</label>
           <textarea id="torneio-premio" rows="2" placeholder="Descrição do prêmio..."></textarea>
         </div>
