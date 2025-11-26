@@ -9,6 +9,8 @@
     <link rel="icon" href="{% static 'images/favicon.ico' %}">
     <title>Login AthleTech</title>
     <link rel="stylesheet" href="{% static 'css/auth_frontend.css' %}" />
+    <link rel="stylesheet" href="{% static 'css/responsive.css' %}" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
     <script>
       window.API_CONFIG = {
         API_BASE_URL: "/api"
@@ -16,6 +18,42 @@
     </script>
   </head>
   <body>
+    <!-- Menu Mobile CSS Puro -->
+    <div class="mobile-nav-container">
+      <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
+      <div class="hamburger-lines">
+        <span class="line line1"></span>
+        <span class="line line2"></span>
+        <span class="line line3"></span>
+      </div>
+      <div class="mobile-logo">
+        <i class="fa-solid fa-dumbbell"></i>
+        <span>ATHLETECH</span>
+      </div>
+      <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
+      <ul class="mobile-menu-items">
+        <li class="menu-section">Navegação</li>
+        <li><a href="/"><i class="fa-solid fa-house"></i> Início</a></li>
+        <li><a href="/planos/"><i class="fa-solid fa-tags"></i> Planos</a></li>
+        <li class="menu-divider"></li>
+        <li class="menu-buttons">
+          <div class="login-only" style="display: flex; flex-direction: column; gap: 12px;">
+            <a href="{% url 'cadastro' %}" class="btn-menu primary"><i class="fa-solid fa-user-plus"></i> Cadastre-se</a>
+          </div>
+          <div class="user-only" style="display: none; flex-direction: column; gap: 12px;">
+            <div class="menu-user"><i class="fa-solid fa-user"></i> <span id="mobile-user-name">Usuário</span></div>
+            <a href="/portal/" class="btn-menu primary"><i class="fa-solid fa-gauge"></i> Portal</a>
+            <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+              {% csrf_token %}
+              <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
+                <i class="fa-solid fa-right-from-bracket"></i> Sair
+              </button>
+            </form>
+          </div>
+        </li>
+      </ul>
+    </div>
+
     <header class="portal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
       <div class="brand" style="font-weight: 700; color: #e5e7eb;"><i class="fa-solid fa-dumbbell"></i> AthleTech • Login</div>
       <nav class="header-actions" style="display: flex; align-items: center; gap: 12px;">
@@ -65,6 +103,13 @@
     <script src="{% static 'js/auth.js' %}"></script>
     <script src="{% static 'js/login.js' %}"></script>
     <script src="{% static 'js/user-menu.js' %}"></script>
+    <script src="{% static 'js/mobile-menu.js' %}"></script>
+    <style>
+      @media (max-width: 600px) {
+        .portal-header .header-actions { display: none !important; }
+        .portal-header .hamburger { display: flex !important; }
+      }
+    </style>
   </body>
 </html>
 

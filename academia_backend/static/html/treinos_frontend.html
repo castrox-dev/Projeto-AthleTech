@@ -9,6 +9,7 @@
   <link rel="icon" href="{% static 'images/favicon.ico' %}">
   <link rel="stylesheet" href="{% static 'css/portal.css' %}">
   <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <style>
     /* Tema escuro consistente com o portal */
@@ -320,8 +321,40 @@
   </style>
 </head>
 <body>
+  <!-- Menu Mobile CSS Puro -->
+  <div class="mobile-nav-container">
+    <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
+    <div class="hamburger-lines">
+      <span class="line line1"></span>
+      <span class="line line2"></span>
+      <span class="line line3"></span>
+    </div>
+    <div class="mobile-logo">
+      <i class="fa-solid fa-dumbbell"></i>
+      <span>ATHLETECH</span>
+    </div>
+    <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
+    <ul class="mobile-menu-items">
+      <li class="menu-section">Navegação</li>
+      <li><a href="/portal/"><i class="fa-solid fa-gauge"></i> Portal</a></li>
+      <li><a href="/treinos/" class="active"><i class="fa-solid fa-dumbbell"></i> Treinos</a></li>
+      <li><a href="{% url 'torneio' %}"><i class="fa-solid fa-trophy"></i> Torneio</a></li>
+      <li class="menu-divider"></li>
+      <li><a href="/"><i class="fa-solid fa-house"></i> Início</a></li>
+      <li class="menu-buttons">
+        <div class="menu-user"><i class="fa-solid fa-user"></i> <span id="mobile-user-name">Usuário</span></div>
+        <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
+            <i class="fa-solid fa-right-from-bracket"></i> Sair
+          </button>
+        </form>
+      </li>
+    </ul>
+  </div>
+
   <header class="portal-header">
-    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Meus Treinos</div>
+    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Treinos</div>
     <nav class="header-actions">
       <a href="/portal/" class="btn small">Portal</a>
       <a href="/" class="btn small">Início</a>
@@ -392,6 +425,7 @@
     };
   </script>
   <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/mobile-menu.js' %}"></script>
   <script src="{% static 'js/treinos.js' %}"></script>
 </body>
 </html>

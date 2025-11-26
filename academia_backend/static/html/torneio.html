@@ -10,10 +10,43 @@
   <link rel="stylesheet" href="{% static 'css/portal.css' %}">
   <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
   <link rel="stylesheet" href="{% static 'css/torneio.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
 </head>
 <body>
+  <!-- Menu Mobile CSS Puro -->
+  <div class="mobile-nav-container">
+    <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
+    <div class="hamburger-lines">
+      <span class="line line1"></span>
+      <span class="line line2"></span>
+      <span class="line line3"></span>
+    </div>
+    <div class="mobile-logo">
+      <i class="fa-solid fa-trophy"></i>
+      <span>ATHLETECH</span>
+    </div>
+    <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
+    <ul class="mobile-menu-items">
+      <li class="menu-section">Menu</li>
+      <li><a href="/portal/"><i class="fa-solid fa-gauge"></i> Portal</a></li>
+      <li><a href="/treinos/"><i class="fa-solid fa-dumbbell"></i> Treinos</a></li>
+      <li><a href="{% url 'torneio' %}" class="active"><i class="fa-solid fa-trophy"></i> Torneio</a></li>
+      <li class="menu-divider"></li>
+      <li><a href="/"><i class="fa-solid fa-house"></i> Início</a></li>
+      <li class="menu-buttons">
+        <div class="menu-user"><i class="fa-solid fa-user"></i> <span id="mobile-user-name">Usuário</span></div>
+        <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+          {% csrf_token %}
+          <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
+            <i class="fa-solid fa-right-from-bracket"></i> Sair
+          </button>
+        </form>
+      </li>
+    </ul>
+  </div>
+
   <header class="portal-header">
-    <div class="brand"><i class="fa-solid fa-trophy"></i> AthleTech • Competição Interna</div>
+    <div class="brand"><i class="fa-solid fa-trophy"></i> AthleTech • Torneio</div>
     <nav class="header-actions">
       <a href="/" class="btn small">Início</a>
       <span id="user-name" class="user-name">Carregando...</span>
@@ -165,6 +198,7 @@
 
   <script src="{% static 'js/torneio.js' %}"></script>
   <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/mobile-menu.js' %}"></script>
   <script>
     // Handler específico para logout na página de torneio
     document.addEventListener('DOMContentLoaded', function() {

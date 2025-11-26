@@ -9,6 +9,7 @@
   
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/7.0.1/css/all.min.css" integrity="sha512-2SwdPD6INVrV/lHTZbO2nodKhrnDdJK9/kg2XD1r9uGqPo1cUbujc+IYdlYdEErWNu69gVcYgdxlmVmzTWnetw==" crossorigin="anonymous" referrerpolicy="no-referrer" />
   <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.7.1/jquery.min.js" integrity="sha512-v2CJ7UaYy4JwqLDIrZUI/4hqeoQieOmAZNXBeQyjo21dadnwR+8ZaIJVT8EE2iyI61OV8e6M8PP2/4hpQINQ/g==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>  
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
   <script src="https://cdn.jsdelivr.net/npm/tsparticles@2/tsparticles.bundle.min.js"></script>
@@ -16,6 +17,44 @@
   <title>AthleTech - Início</title>
 </head>
 <body>
+  <!-- Menu Mobile CSS Puro -->
+  <div class="mobile-nav-container">
+    <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
+    <div class="hamburger-lines">
+      <span class="line line1"></span>
+      <span class="line line2"></span>
+      <span class="line line3"></span>
+    </div>
+    <div class="mobile-logo">
+      <i class="fa-solid fa-dumbbell"></i>
+      <span>ATHLETECH</span>
+    </div>
+    <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
+    <ul class="mobile-menu-items">
+      <li class="menu-section">Navegação</li>
+      <li><a href="#home"><i class="fa-solid fa-house"></i> Início</a></li>
+      <li><a href="#planos"><i class="fa-solid fa-tags"></i> Planos</a></li>
+      <li><a href="#testimonials"><i class="fa-solid fa-comments"></i> Depoimentos</a></li>
+      <li class="menu-divider"></li>
+      <li class="menu-buttons">
+        <div class="login-only" style="display: flex; flex-direction: column; gap: 12px;">
+          <a href="{% url 'login' %}" class="btn-menu primary"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+          <a href="{% url 'cadastro' %}" class="btn-menu secondary"><i class="fa-solid fa-user-plus"></i> Cadastre-se</a>
+        </div>
+        <div class="user-only" style="display: none; flex-direction: column; gap: 12px;">
+          <div class="menu-user"><i class="fa-solid fa-user"></i> <span id="mobile-user-name">Usuário</span></div>
+          <a href="{% url 'portal' %}" class="btn-menu primary"><i class="fa-solid fa-gauge"></i> Portal</a>
+          <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+            {% csrf_token %}
+            <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
+              <i class="fa-solid fa-right-from-bracket"></i> Sair
+            </button>
+          </form>
+        </div>
+      </li>
+    </ul>
+  </div>
+
   <header>
     <nav id="navbar">
       <i class="fa-solid fa-dumbbell" id="nav_logo"><span>ATHLETECH</span></i>
@@ -196,6 +235,7 @@
     };
   </script>
   <script src="{% static 'js/user-menu.js' %}"></script>
+  <script src="{% static 'js/mobile-menu.js' %}"></script>
   <script src="{% static 'js/script.js' %}"></script>
 
   <!-- Partículas -->
