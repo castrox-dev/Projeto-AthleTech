@@ -392,7 +392,7 @@
         </div>
         <div>
           <label for="prof-cref">CREF</label>
-          <input type="text" id="prof-cref" name="cref" placeholder="Ex.: CREF123456-G/UF">
+          <input type="text" id="prof-cref" name="cref" placeholder="000000-G/UF">
         </div>
         <div>
           <label for="prof-telefone">Telefone</label>
@@ -422,6 +422,8 @@
         role: 'professor',
         password: tempPassword,
         password_confirm: tempPassword,
+        especialidade: formData.get('especialidade') || '',
+        cref: formData.get('cref') || '',
       };
 
       try {
@@ -469,7 +471,7 @@
         </div>
         <div>
           <label for="edit-prof-cref">CREF</label>
-          <input type="text" id="edit-prof-cref" name="cref" value="${prof.cref || ''}">
+          <input type="text" id="edit-prof-cref" name="cref" value="${prof.cref || ''}" placeholder="000000-G/UF">
         </div>
         <div>
           <label for="edit-prof-telefone">Telefone</label>

@@ -26,6 +26,10 @@ class Usuario(AbstractUser):
     updated_at = models.DateTimeField('Atualizado em', auto_now=True)
     is_active_member = models.BooleanField('Membro Ativo', default=False)
     
+    # Campos específicos para professores
+    especialidade = models.CharField('Especialidade', max_length=100, blank=True, null=True)
+    cref = models.CharField('CREF', max_length=20, blank=True, null=True, help_text='Formato: 000000-G/UF')
+    
     class Meta:
         verbose_name = 'Usuário'
         verbose_name_plural = 'Usuários'

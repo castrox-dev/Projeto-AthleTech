@@ -6,42 +6,1332 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Painel do Professor • AthleTech</title>
   <link rel="icon" href="{% static 'images/favicon.ico' %}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" integrity="sha512-B/Lk5XlU5IgxkpDqKqCFoYD9tiq6qVgqU5gUjJw9MBQNzEiASQL4W5nz7GVaCi6ctX+pMx2k49+bUNK70CklxQ==" crossorigin="anonymous" referrerpolicy="no-referrer">
-  <link rel="stylesheet" href="{% static 'css/professor.css' %}">
-  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+  
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    
+    :root {
+      --bg: #0a0a0a;
+      --panel: rgba(255, 255, 255, 0.03);
+      --border: rgba(255, 255, 255, 0.08);
+      --primary: #00bcd4;
+      --primary-soft: rgba(0, 188, 212, 0.15);
+      --accent: #00bcd4;
+      --text: #e5e7eb;
+      --muted: #9ca3af;
+      --success: #22c55e;
+      --warning: #eab308;
+      --danger: #ef4444;
+    }
+    
+    html {
+      overflow-x: hidden;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #0d1117 50%, #161b22 100%);
+      min-height: 100vh;
+      color: var(--text);
+      overflow-x: hidden;
+      width: 100%;
+      max-width: 100vw;
+    }
+    
+    /* Background Animation */
+    .bg-animation {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      z-index: 0;
+      overflow: hidden;
+    }
+    
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%; left: -50%;
+      width: 200%; height: 200%;
+      background: radial-gradient(circle at 20% 80%, rgba(0, 188, 212, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(0, 150, 180, 0.08) 0%, transparent 50%);
+      animation: rotate 40s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Header */
+    .header {
+      position: sticky;
+      top: 0;
+      z-index: 50;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--border);
+      padding: 16px 28px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .logo {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-weight: 700;
+      font-size: 1.1rem;
+      color: #fff;
+    }
+    
+    .logo i { color: var(--accent); font-size: 1.3rem; }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 18px;
+      border-radius: 10px;
+      border: none;
+      text-decoration: none;
+      font-weight: 500;
+      font-size: 0.9rem;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    
+    .btn.primary {
+      background: linear-gradient(135deg, var(--primary), #0097a7);
+      color: #fff;
+    }
+    
+    .btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 188, 212, 0.3);
+    }
+    
+    .btn.outline {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text);
+    }
+    
+    .btn.outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+    
+    .logout-form { margin: 0; }
+    
+    /* Main Content */
+    .main {
+      position: relative;
+      z-index: 10;
+      padding: 32px 40px;
+      display: flex;
+      flex-direction: column;
+      gap: 24px;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    /* Sections */
+    .section {
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 24px;
+      backdrop-filter: blur(10px);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      margin-bottom: 20px;
+    }
+    
+    .section-title {
+      font-size: 1.2rem;
+      font-weight: 600;
+      background: linear-gradient(135deg, var(--accent), #4dd0e1);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+    
+    .filters {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    
+    .filters select {
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 10px 16px;
+      outline: none;
+      font-family: inherit;
+    }
+    
+    .filters select option {
+      background: #1a1a1a;
+      color: var(--text);
+    }
+    
+    /* Grid */
+    .grid { 
+      display: grid; 
+      gap: 18px;
+      width: 100%;
+      max-width: 100%;
+    }
+    .grid.two { grid-template-columns: repeat(auto-fit, minmax(min(340px, 100%), 1fr)); }
+    
+    /* Cards */
+    .card {
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 20px;
+      transition: all 0.3s ease;
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .card:hover {
+      border-color: rgba(0, 188, 212, 0.3);
+      transform: translateY(-2px);
+    }
+    
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 10px;
+      margin-bottom: 12px;
+    }
+    
+    .card-header h2 {
+      font-size: 1rem;
+      font-weight: 600;
+    }
+    
+    .card p { color: var(--muted); font-size: 0.9rem; }
+    
+    .badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: var(--primary-soft);
+      color: var(--accent);
+      border-radius: 20px;
+      padding: 6px 12px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    /* Timeline */
+    .timeline { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 16px;
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .timeline-item {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 16px;
+      align-items: start;
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .timeline-time {
+      color: var(--muted);
+      font-size: 0.8rem;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    
+    .timeline-card {
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+      overflow: hidden;
+    }
+    
+    .timeline-card strong { display: block; margin-bottom: 8px; word-break: break-word; }
+    .timeline-card p { color: var(--muted); font-size: 0.9rem; margin-bottom: 12px; word-break: break-word; }
+    
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .pill.success { background: rgba(34, 197, 94, 0.15); color: var(--success); }
+    .pill.accent { background: rgba(0, 188, 212, 0.15); color: var(--accent); }
+    
+    /* Table */
+    .table-container {
+      width: 100%;
+      overflow-x: auto;
+      -webkit-overflow-scrolling: touch;
+    }
+    
+    .table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 600px;
+    }
+    
+    .table th, .table td {
+      text-align: left;
+      padding: 14px 12px;
+      border-bottom: 1px solid var(--border);
+      font-size: 0.9rem;
+    }
+    
+    .table th {
+      font-size: 0.75rem;
+      color: var(--muted);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      font-weight: 500;
+      white-space: nowrap;
+    }
+    
+    .table tbody tr:hover { background: rgba(255, 255, 255, 0.02); }
+    
+    /* List */
+    .list { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 12px;
+      width: 100%;
+      max-width: 100%;
+    }
+    
+    .list-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 16px;
+      padding: 16px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: rgba(255, 255, 255, 0.02);
+      width: 100%;
+      max-width: 100%;
+      box-sizing: border-box;
+    }
+    
+    .list-item .info { 
+      display: flex; 
+      flex-direction: column; 
+      gap: 4px;
+      flex: 1;
+      min-width: 0;
+    }
+    .list-item .info strong { color: #fff; word-break: break-word; }
+    .list-item .info span { color: var(--muted); font-size: 0.85rem; word-break: break-word; }
+    
+    /* Modal */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.8);
+      backdrop-filter: blur(4px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 2000;
+      padding: 20px;
+      overflow-y: auto;
+    }
+    
+    .modal-overlay.hidden { display: none; }
+    
+    .modal {
+      background: #1a1a1a;
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      width: min(640px, 100%);
+      max-height: 90vh;
+      display: flex;
+      flex-direction: column;
+      margin: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 20px 24px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+    
+    .modal-header h2 { 
+      font-size: 1.1rem;
+      word-break: break-word;
+      flex: 1;
+      margin-right: 12px;
+    }
+    
+    .modal-close {
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 50%;
+      color: var(--text);
+      font-size: 1.5rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+    
+    .modal-body {
+      padding: 24px;
+      overflow-y: auto;
+      flex: 1;
+      min-height: 0;
+    }
+    
+    .modal-body label { 
+      display: block; 
+      margin-bottom: 6px; 
+      font-weight: 500; 
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    
+    .modal-body input,
+    .modal-body textarea,
+    .modal-body select {
+      width: 100%;
+      background: rgba(0, 0, 0, 0.4);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      color: var(--text);
+      padding: 12px;
+      font-size: 0.95rem;
+      font-family: inherit;
+      margin-bottom: 16px;
+      box-sizing: border-box;
+    }
+    
+    .modal-body input:focus,
+    .modal-body select:focus,
+    .modal-body textarea:focus {
+      outline: none;
+      border-color: var(--accent);
+      box-shadow: 0 0 0 3px rgba(0, 188, 212, 0.15);
+    }
+    
+    .modal-footer {
+      display: flex;
+      justify-content: flex-end;
+      gap: 12px;
+      padding: 0 24px 24px;
+      flex-shrink: 0;
+    }
+    
+    .modal-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+    }
+    
+    /* Biblioteca de Exercícios */
+    .biblioteca-header {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+      flex-wrap: wrap;
+    }
+    
+    .biblioteca-search {
+      flex: 1;
+      min-width: 200px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(0, 0, 0, 0.3);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 0 16px;
+    }
+    
+    .biblioteca-search i {
+      color: var(--muted);
+    }
+    
+    .biblioteca-search input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      color: var(--text);
+      padding: 12px 0;
+      font-size: 0.95rem;
+      outline: none;
+    }
+    
+    .biblioteca-search input::placeholder {
+      color: var(--muted);
+    }
+    
+    .biblioteca-container {
+      max-height: 400px;
+      overflow-y: auto;
+      padding-right: 8px;
+    }
+    
+    .biblioteca-container::-webkit-scrollbar {
+      width: 6px;
+    }
+    
+    .biblioteca-container::-webkit-scrollbar-track {
+      background: rgba(255, 255, 255, 0.05);
+      border-radius: 3px;
+    }
+    
+    .biblioteca-container::-webkit-scrollbar-thumb {
+      background: var(--accent);
+      border-radius: 3px;
+    }
+    
+    .exercise-card-full {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px;
+      margin-bottom: 12px;
+      transition: all 0.2s ease;
+    }
+    
+    .exercise-card-full:hover {
+      border-color: var(--accent);
+      background: rgba(0, 188, 212, 0.05);
+    }
+    
+    .exercise-card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      gap: 12px;
+    }
+    
+    .exercise-card-info {
+      flex: 1;
+      min-width: 0;
+    }
+    
+    .exercise-card-info h4 {
+      font-size: 1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #fff;
+      word-break: break-word;
+    }
+    
+    .exercise-tags {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+    }
+    
+    .exercise-tags .tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      padding: 4px 10px;
+      border-radius: 20px;
+      font-size: 0.75rem;
+      font-weight: 500;
+    }
+    
+    .exercise-tags .tag.categoria {
+      background: rgba(0, 188, 212, 0.15);
+      color: var(--accent);
+    }
+    
+    .exercise-tags .tag.nivel {
+      background: rgba(34, 197, 94, 0.15);
+      color: var(--success);
+    }
+    
+    .exercise-tags .tag.equipamento {
+      background: rgba(234, 179, 8, 0.15);
+      color: var(--warning);
+    }
+    
+    .exercise-card-actions {
+      display: flex;
+      gap: 8px;
+      flex-shrink: 0;
+    }
+    
+    .btn-icon {
+      width: 36px;
+      height: 36px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255, 255, 255, 0.1);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      transition: all 0.2s;
+      text-decoration: none;
+    }
+    
+    .btn-icon:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+    
+    .exercise-desc {
+      margin-top: 12px;
+      font-size: 0.85rem;
+      color: var(--muted);
+      line-height: 1.5;
+      word-break: break-word;
+    }
+    
+    /* Form styles */
+    .form-group {
+      margin-bottom: 16px;
+    }
+    
+    .form-group label {
+      display: block;
+      margin-bottom: 6px;
+      font-weight: 500;
+      font-size: 0.9rem;
+      color: var(--text);
+    }
+    
+    .form-row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+    
+    @media (max-width: 480px) {
+      .form-row {
+        grid-template-columns: 1fr;
+      }
+    }
+    
+    /* Modal content buttons */
+    .modal-body .btn {
+      width: 100%;
+      justify-content: flex-start;
+      padding: 16px 20px;
+      text-align: left;
+      margin-bottom: 0;
+    }
+    
+    .modal-body .btn > div {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 4px;
+    }
+    
+    .modal-body .btn strong {
+      display: block;
+      font-size: 0.95rem;
+    }
+    
+    .modal-body .btn span {
+      display: block;
+      font-size: 0.8rem;
+      opacity: 0.8;
+      font-weight: normal;
+    }
+    
+    /* Toast */
+    .toast-container {
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+    
+    .toast {
+      background: rgba(10, 10, 20, 0.98);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-left: 4px solid var(--accent);
+      border-radius: 14px;
+      padding: 16px 18px;
+      min-width: 280px;
+      max-width: 380px;
+      display: flex;
+      gap: 12px;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7);
+      animation: toastSlideIn 0.3s ease;
+    }
+    
+    .toast.success { border-left-color: var(--success); }
+    .toast.error { border-left-color: var(--danger); }
+    .toast.warning { border-left-color: var(--warning); }
+    
+    .toast .toast-content { display: flex; flex-direction: column; gap: 4px; }
+    .toast .toast-title { font-weight: 600; color: #fff; }
+    
+    .toast.fade-out {
+      opacity: 0;
+      transform: translateX(20px);
+      transition: all 0.2s ease;
+    }
+    
+    @keyframes toastSlideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to { opacity: 1; transform: translateX(0); }
+    }
+    
+    /* Mobile Header */
+    .mobile-header {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 60px;
+      background: rgba(10, 10, 15, 0.95);
+      backdrop-filter: blur(10px);
+      padding: 0 16px;
+      align-items: center;
+      justify-content: space-between;
+      z-index: 1001;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .mobile-header .brand {
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .mobile-header .brand i { color: var(--accent); }
+    
+    .hamburger-btn {
+      width: 44px;
+      height: 44px;
+      background: rgba(0, 188, 212, 0.2);
+      border: 1px solid rgba(0, 188, 212, 0.3);
+      border-radius: 10px;
+      cursor: pointer;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      padding: 10px;
+    }
+    
+    .hamburger-btn span {
+      display: block;
+      width: 22px;
+      height: 2px;
+      background: var(--accent);
+      border-radius: 2px;
+      transition: all 0.3s ease;
+    }
+    
+    .hamburger-btn.active span:nth-child(1) { transform: rotate(45deg) translate(5px, 5px); }
+    .hamburger-btn.active span:nth-child(2) { opacity: 0; }
+    .hamburger-btn.active span:nth-child(3) { transform: rotate(-45deg) translate(5px, -5px); }
+    
+    .mobile-menu-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; right: 0; bottom: 0;
+      background: rgba(0, 0, 0, 0.7);
+      z-index: 1000;
+    }
+    
+    .mobile-menu-overlay.active { display: block; }
+    
+    .mobile-menu {
+      position: fixed;
+      top: 0;
+      right: -300px;
+      width: 280px;
+      height: 100%;
+      background: rgba(15, 15, 20, 0.98);
+      backdrop-filter: blur(10px);
+      z-index: 1002;
+      padding: 20px;
+      transition: right 0.3s ease;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+    }
+    
+    .mobile-menu.active { right: 0; }
+    
+    .mobile-menu-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding-bottom: 20px;
+      margin-bottom: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+    
+    .mobile-menu-header .brand {
+      font-weight: 700;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    
+    .mobile-menu-header .brand i { color: var(--accent); }
+    
+    .mobile-menu-close {
+      width: 36px;
+      height: 36px;
+      background: rgba(255, 255, 255, 0.1);
+      border: none;
+      border-radius: 8px;
+      color: var(--muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1.2rem;
+    }
+    
+    .mobile-menu-close:hover { background: rgba(255, 255, 255, 0.15); color: #fff; }
+    
+    .mobile-menu-section {
+      font-size: 0.75rem;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      color: var(--accent);
+      padding: 12px 0 8px;
+      font-weight: 600;
+    }
+    
+    .mobile-menu-link {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 12px;
+      color: var(--muted);
+      text-decoration: none;
+      border-radius: 10px;
+      transition: all 0.2s;
+      font-size: 0.95rem;
+    }
+    
+    .mobile-menu-link:hover, .mobile-menu-link.active {
+      background: rgba(0, 188, 212, 0.15);
+      color: var(--text);
+    }
+    
+    .mobile-menu-link i { width: 20px; text-align: center; }
+    
+    .mobile-menu-footer {
+      margin-top: auto;
+      padding-top: 20px;
+      border-top: 1px solid var(--border);
+    }
+    
+    .mobile-logout-btn {
+      width: 100%;
+      padding: 12px;
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+      border-radius: 10px;
+      cursor: pointer;
+      font-family: inherit;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+    
+    .mobile-logout-btn:hover { background: rgba(239, 68, 68, 0.2); }
+    
+    /* Responsive */
+    @media (max-width: 1024px) {
+      .timeline-item { grid-template-columns: 1fr; }
+      .main { padding: 24px; }
+      
+      .table {
+        display: block;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+      }
+    }
+    
+    @media (max-width: 768px) {
+      .mobile-header { display: flex; }
+      .header { display: none; }
+      
+      .main { 
+        padding: 80px 16px 16px 16px;
+        width: 100%;
+        max-width: 100%;
+      }
+      
+      .section { 
+        width: 100%;
+        max-width: 100%;
+        overflow: hidden;
+      }
+      
+      .section-header { 
+        flex-direction: column; 
+        align-items: flex-start;
+        gap: 12px;
+      }
+      
+      .section-title {
+        font-size: 1.1rem;
+        word-break: break-word;
+      }
+      
+      .filters { 
+        width: 100%;
+        flex-direction: column;
+      }
+      .filters select, .filters .btn { 
+        width: 100%;
+        box-sizing: border-box;
+      }
+      
+      .grid.two { grid-template-columns: 1fr; }
+      
+      .card {
+        width: 100%;
+        max-width: 100%;
+      }
+      
+      .card-header {
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      
+      .card-header h2 {
+        font-size: 0.95rem;
+        flex: 1;
+        min-width: 0;
+        word-break: break-word;
+      }
+      
+      .badge {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+        flex-shrink: 0;
+      }
+      
+      /* Timeline */
+      .timeline-item {
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      
+      .timeline-time {
+        font-size: 0.75rem;
+      }
+      
+      .timeline-card {
+        padding: 14px;
+      }
+      
+      .timeline-card strong {
+        font-size: 0.95rem;
+      }
+      
+      .timeline-card p {
+        font-size: 0.85rem;
+      }
+      
+      .timeline-card .filters {
+        flex-direction: row;
+        flex-wrap: wrap;
+      }
+      
+      .pill {
+        font-size: 0.7rem;
+        padding: 4px 10px;
+      }
+      
+      /* Table */
+      .table {
+        display: block;
+        width: 100%;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+        font-size: 0.85rem;
+      }
+      
+      .table th, .table td {
+        padding: 10px 8px;
+        white-space: nowrap;
+      }
+      
+      /* List */
+      .list-item { 
+        flex-direction: column; 
+        align-items: flex-start;
+        width: 100%;
+        padding: 14px;
+      }
+      
+      .list-item .info {
+        width: 100%;
+      }
+      
+      .list-item .info strong {
+        font-size: 0.95rem;
+        word-break: break-word;
+      }
+      
+      .list-item .info span {
+        font-size: 0.8rem;
+        word-break: break-word;
+      }
+      
+      .list-item .btn { 
+        width: 100%; 
+        margin-top: 12px;
+        justify-content: center;
+      }
+      
+      /* Modal Responsive */
+      .modal-overlay {
+        padding: 10px;
+        align-items: flex-start;
+        padding-top: 20px;
+      }
+      
+      .modal {
+        margin: 0;
+        max-width: 100%;
+        max-height: calc(100vh - 40px);
+        border-radius: 16px;
+      }
+      
+      .modal-header {
+        padding: 16px 20px;
+      }
+      
+      .modal-header h2 {
+        font-size: 1rem;
+      }
+      
+      .modal-body {
+        padding: 20px;
+      }
+      
+      .modal-footer {
+        padding: 0 20px 20px;
+        flex-direction: column;
+      }
+      
+      .modal-footer .btn {
+        width: 100%;
+      }
+      
+      .modal-body .btn {
+        padding: 14px 16px;
+      }
+      
+      .modal-body .btn > div {
+        gap: 2px;
+      }
+      
+      .modal-body .btn strong {
+        font-size: 0.9rem;
+      }
+      
+      .modal-body .btn span {
+        font-size: 0.75rem;
+      }
+      
+      /* Ajustes para botões de ação grandes */
+      .modal-body .btn[onclick*="criarNovoTreino"],
+      .modal-body .btn[onclick*="renovarTreino"],
+      .modal-body .btn[onclick*="agendarAvaliacao"] {
+        flex-direction: row;
+        align-items: center;
+        text-align: left;
+      }
+      
+      .modal-body .btn[onclick*="criarNovoTreino"] > div,
+      .modal-body .btn[onclick*="renovarTreino"] > div,
+      .modal-body .btn[onclick*="agendarAvaliacao"] > div {
+        flex: 1;
+        min-width: 0;
+      }
+      
+      .modal-body .btn i {
+        flex-shrink: 0;
+        font-size: 1.2rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .main { 
+        padding: 70px 12px 12px 12px;
+        width: 100%;
+      }
+      
+      .section { 
+        padding: 14px;
+        border-radius: 12px;
+      }
+      
+      .section-title { 
+        font-size: 1rem;
+      }
+      
+      .section-title i {
+        font-size: 0.9rem;
+      }
+      
+      .card { 
+        padding: 14px;
+        border-radius: 12px;
+      }
+      
+      .card-header h2 {
+        font-size: 0.9rem;
+      }
+      
+      .card p {
+        font-size: 0.85rem;
+      }
+      
+      .badge {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+      }
+      
+      /* Timeline */
+      .timeline-card {
+        padding: 12px;
+      }
+      
+      .pill {
+        font-size: 0.65rem;
+        padding: 3px 8px;
+      }
+      
+      /* Buttons */
+      .btn {
+        padding: 10px 14px;
+        font-size: 0.85rem;
+      }
+      
+      /* Toast */
+      .toast-container {
+        left: 12px;
+        right: 12px;
+        top: 70px;
+      }
+      
+      .toast {
+        min-width: auto;
+        max-width: 100%;
+        font-size: 0.9rem;
+      }
+      
+      /* Modal Mobile Small */
+      .modal-overlay {
+        padding: 0;
+      }
+      
+      .modal {
+        max-height: 100vh;
+        border-radius: 0;
+        min-height: 100vh;
+        display: flex;
+        flex-direction: column;
+      }
+      
+      .modal-header {
+        padding: 14px 16px;
+        position: sticky;
+        top: 0;
+        background: #1a1a1a;
+        z-index: 10;
+      }
+      
+      .modal-body {
+        padding: 16px;
+        flex: 1;
+        overflow-y: auto;
+      }
+      
+      .modal-footer {
+        padding: 12px 16px 16px;
+        position: sticky;
+        bottom: 0;
+        background: #1a1a1a;
+        border-top: 1px solid var(--border);
+        margin-top: auto;
+      }
+      
+      .modal-body label {
+        font-size: 0.85rem;
+      }
+      
+      .modal-body input,
+      .modal-body textarea,
+      .modal-body select {
+        padding: 10px;
+        font-size: 0.9rem;
+        margin-bottom: 12px;
+      }
+      
+      /* Biblioteca Mobile */
+      .biblioteca-header {
+        flex-direction: column;
+      }
+      
+      .biblioteca-header .btn {
+        width: 100%;
+        justify-content: center;
+      }
+      
+      .biblioteca-container {
+        max-height: calc(100vh - 280px);
+      }
+      
+      .exercise-card-header {
+        flex-direction: column;
+        gap: 12px;
+      }
+      
+      .exercise-card-actions {
+        width: 100%;
+        justify-content: flex-end;
+      }
+      
+      .exercise-tags {
+        gap: 4px;
+      }
+      
+      .exercise-tags .tag {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- Menu Mobile CSS Puro -->
-  <div class="mobile-nav-container">
-    <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
-    <div class="hamburger-lines">
-      <span class="line line1"></span>
-      <span class="line line2"></span>
-      <span class="line line3"></span>
-    </div>
-    <div class="mobile-logo">
+  <div class="bg-animation"></div>
+  
+  <!-- Mobile Header -->
+  <div class="mobile-header">
+    <div class="brand">
       <i class="fa-solid fa-dumbbell"></i>
-      <span>ATHLETECH</span>
+      <span>Professor</span>
     </div>
-    <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
-    <ul class="mobile-menu-items">
-      <li class="menu-section">Ações Rápidas</li>
-      <li><a href="#" id="mobile-btn-novo-treino"><i class="fa-solid fa-plus"></i> Novo Treino</a></li>
-      <li><a href="#" id="mobile-btn-biblioteca"><i class="fa-solid fa-book"></i> Biblioteca</a></li>
-      <li><a href="#" id="mobile-btn-nova-avaliacao"><i class="fa-solid fa-calendar-plus"></i> Nova Avaliação</a></li>
-      <li class="menu-divider"></li>
-      <li><a href="{% url 'torneio' %}"><i class="fa-solid fa-trophy"></i> Torneio</a></li>
-      <li><a href="/"><i class="fa-solid fa-house"></i> Início</a></li>
-      <li class="menu-buttons">
-        <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
-          {% csrf_token %}
-          <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
-            <i class="fa-solid fa-right-from-bracket"></i> Sair
-          </button>
-        </form>
-      </li>
-    </ul>
+    <button class="hamburger-btn" id="hamburger-btn" onclick="toggleMobileMenu()">
+      <span></span>
+      <span></span>
+      <span></span>
+    </button>
   </div>
+  
+  <!-- Mobile Menu Overlay -->
+  <div class="mobile-menu-overlay" id="mobile-menu-overlay" onclick="closeMobileMenu()"></div>
+  
+  <!-- Mobile Menu -->
+  <nav class="mobile-menu" id="mobile-menu">
+    <div class="mobile-menu-header">
+      <div class="brand">
+        <i class="fa-solid fa-dumbbell"></i>
+        <span>AthleTech</span>
+      </div>
+      <button class="mobile-menu-close" onclick="closeMobileMenu()">
+        <i class="fa-solid fa-times"></i>
+      </button>
+    </div>
+    
+    <div class="mobile-menu-section">Ações Rápidas</div>
+    <a href="#" class="mobile-menu-link" id="mobile-btn-novo-treino" onclick="closeMobileMenu()">
+      <i class="fa-solid fa-plus"></i> Novo Treino
+    </a>
+    <a href="#" class="mobile-menu-link" id="mobile-btn-biblioteca" onclick="closeMobileMenu()">
+      <i class="fa-solid fa-book"></i> Biblioteca
+    </a>
+    <a href="#" class="mobile-menu-link" id="mobile-btn-nova-avaliacao" onclick="closeMobileMenu()">
+      <i class="fa-solid fa-calendar-plus"></i> Nova Avaliação
+    </a>
+    
+    <div class="mobile-menu-section">Navegação</div>
+    <a href="{% url 'torneio' %}" class="mobile-menu-link">
+      <i class="fa-solid fa-trophy"></i> Torneio
+    </a>
+    <a href="/portal/" class="mobile-menu-link">
+      <i class="fa-solid fa-gauge"></i> Portal
+    </a>
+    <a href="/" class="mobile-menu-link">
+      <i class="fa-solid fa-house"></i> Início
+    </a>
+    
+    <div class="mobile-menu-footer">
+      <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
+        {% csrf_token %}
+        <button type="submit" class="mobile-logout-btn">
+          <i class="fa-solid fa-right-from-bracket"></i> Sair
+        </button>
+      </form>
+    </div>
+  </nav>
 
   <header class="header">
     <div class="logo">
@@ -50,11 +1340,11 @@
     </div>
     <div class="header-actions">
       <a href="{% url 'torneio' %}" class="btn outline"><i class="fa-solid fa-trophy"></i>Torneio</a>
-      <a href="#" class="btn outline" id="btn-biblioteca"><i class="fa-solid fa-book"></i>Biblioteca de exercícios</a>
+      <a href="#" class="btn outline" id="btn-biblioteca"><i class="fa-solid fa-book"></i>Biblioteca</a>
       <a href="#" class="btn primary" id="btn-novo-treino"><i class="fa-solid fa-plus"></i>Novo treino</a>
       <form method="POST" action="{% url 'logout' %}" class="logout-form">
         {% csrf_token %}
-        <button type="submit" class="btn outline logout-btn"><i class="fa-solid fa-right-from-bracket"></i>Sair</button>
+        <button type="submit" class="btn outline"><i class="fa-solid fa-right-from-bracket"></i>Sair</button>
       </form>
     </div>
   </header>
@@ -62,14 +1352,14 @@
   <main class="main">
     <section class="section">
       <div class="section-header">
-        <h1 class="section-title">Resumo rápido</h1>
+        <h1 class="section-title"><i class="fa-solid fa-chart-pie"></i> Resumo Rápido</h1>
         <div class="filters">
           <select id="filter-agenda">
             <option>Esta semana</option>
             <option>Últimos 15 dias</option>
             <option>Mês atual</option>
           </select>
-          <a href="#" class="btn outline" id="btn-nova-avaliacao">
+          <a href="#" class="btn primary" id="btn-nova-avaliacao">
             <i class="fa-solid fa-calendar-plus"></i>Nova avaliação
           </a>
         </div>
@@ -77,15 +1367,15 @@
       <div class="grid two">
         <article class="card">
           <div class="card-header">
-            <h2>Alunos acompanhados</h2>
+            <h2><i class="fa-solid fa-user-group"></i> Alunos acompanhados</h2>
             <span class="badge"><i class="fa-solid fa-user-group"></i> 37 ativos</span>
           </div>
           <p>3 novos alunos aguardando avaliação inicial.</p>
         </article>
         <article class="card">
           <div class="card-header">
-            <h2>Treinos em revisão</h2>
-            <span class="badge"><i class="fa-solid fa-pen"></i> 5 ajustes pendentes</span>
+            <h2><i class="fa-solid fa-pen"></i> Treinos em revisão</h2>
+            <span class="badge"><i class="fa-solid fa-pen"></i> 5 ajustes</span>
           </div>
           <p>Atualize os treinos marcados como "Revisar" pelos alunos.</p>
         </article>
@@ -94,7 +1384,7 @@
 
     <section class="section">
       <div class="section-header">
-        <h1 class="section-title">Agenda de avaliações</h1>
+        <h1 class="section-title"><i class="fa-solid fa-calendar"></i> Agenda de Avaliações</h1>
         <div class="filters">
           <select>
             <option>Todos os professores</option>
@@ -139,7 +1429,7 @@
 
     <section class="section">
       <div class="section-header">
-        <h1 class="section-title">Treinos ativos</h1>
+        <h1 class="section-title"><i class="fa-solid fa-dumbbell"></i> Treinos Ativos</h1>
         <div class="filters">
           <select id="filter-treinos">
             <option value="">Todos os objetivos</option>
@@ -149,47 +1439,49 @@
           </select>
         </div>
       </div>
-      <table class="table" id="treinos-table">
-        <thead>
-          <tr>
-            <th>Aluno</th>
-            <th>Objetivo</th>
-            <th>Última atualização</th>
-            <th>Status</th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody>
-        </tbody>
-      </table>
+      <div class="table-container">
+        <table class="table" id="treinos-table">
+          <thead>
+            <tr>
+              <th>Aluno</th>
+              <th>Objetivo</th>
+              <th>Última atualização</th>
+              <th>Status</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+          </tbody>
+        </table>
+      </div>
     </section>
 
     <section class="section">
       <div class="section-header">
-        <h1 class="section-title">Alertas do dia</h1>
+        <h1 class="section-title"><i class="fa-solid fa-bell"></i> Alertas do Dia</h1>
         <a href="#" class="btn outline" id="btn-atualizar-alertas"><i class="fa-solid fa-rotate"></i>Atualizar</a>
       </div>
-      <div class="list">
-        <div class="list-item" data-alert-id="avaliacao">
+      <div class="list" id="alertas-list">
+        <div class="list-item" data-alert-id="avaliacao" data-aluno="Rafael Monteiro">
           <div class="info">
             <strong>Avaliação pendente</strong>
             <span>Envie o questionário pré-avaliação para Rafael Monteiro.</span>
           </div>
-          <a href="#" class="btn primary btn-alert" data-action="enviar-questionario"><i class="fa-solid fa-paper-plane"></i>Enviar agora</a>
+          <a href="#" class="btn primary btn-alert" onclick="abrirModalEnviarQuestionario('Rafael Monteiro'); return false;"><i class="fa-solid fa-paper-plane"></i>Enviar</a>
         </div>
-        <div class="list-item" data-alert-id="feedback">
+        <div class="list-item" data-alert-id="feedback" data-aluno="Larissa Gomes" data-treino="Treino A" data-feedback="Olá professor! O exercício de supino está muito pesado para mim, seria possível reduzir a carga? Também gostaria de saber se posso substituir a remada curvada por outro exercício, pois estou sentindo desconforto nas costas. Obrigada!">
           <div class="info">
             <strong>Feedback recebido</strong>
             <span>Larissa Gomes enviou comentários sobre o treino do dia A.</span>
           </div>
-          <a href="#" class="btn outline btn-alert" data-action="responder-feedback"><i class="fa-solid fa-message"></i>Responder</a>
+          <a href="#" class="btn outline btn-alert" onclick="abrirModalResponderFeedback(this.closest('.list-item')); return false;"><i class="fa-solid fa-message"></i>Responder</a>
         </div>
-        <div class="list-item" data-alert-id="expirado">
+        <div class="list-item" data-alert-id="expirado" data-aluno="Diego Nascimento" data-treino-id="123">
           <div class="info">
             <strong>Treino expirado</strong>
             <span>Atualize o treino de Diego Nascimento antes de sexta-feira.</span>
           </div>
-          <a href="#" class="btn outline btn-alert" data-action="agendar-revisao"><i class="fa-solid fa-calendar"></i>Agendar revisão</a>
+          <a href="#" class="btn outline btn-alert" onclick="abrirModalTreinoExpirado(this.closest('.list-item')); return false;"><i class="fa-solid fa-clock"></i>Resolver</a>
         </div>
       </div>
     </section>
@@ -213,11 +1505,31 @@
       exerciciosEndpoint: "{% url 'exercicios' %}",
       portalAvaliacoesUrl: "{% url 'portal' %}#avaliacoes"
     };
-  </script>
-  <script src="{% static 'js/professor-dashboard.js' %}"></script>
-  <script src="{% static 'js/mobile-menu.js' %}"></script>
-  <script>
-    // Conectar botões do menu mobile aos originais
+    
+    // Mobile Menu Functions
+    function toggleMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const overlay = document.getElementById('mobile-menu-overlay');
+      const btn = document.getElementById('hamburger-btn');
+      
+      menu.classList.toggle('active');
+      overlay.classList.toggle('active');
+      btn.classList.toggle('active');
+      document.body.style.overflow = menu.classList.contains('active') ? 'hidden' : '';
+    }
+    
+    function closeMobileMenu() {
+      const menu = document.getElementById('mobile-menu');
+      const overlay = document.getElementById('mobile-menu-overlay');
+      const btn = document.getElementById('hamburger-btn');
+      
+      menu.classList.remove('active');
+      overlay.classList.remove('active');
+      btn.classList.remove('active');
+      document.body.style.overflow = '';
+    }
+    
+    // Connect mobile buttons to desktop functionality
     document.addEventListener('DOMContentLoaded', function() {
       const mobileNovoTreino = document.getElementById('mobile-btn-novo-treino');
       const mobileBiblioteca = document.getElementById('mobile-btn-biblioteca');
@@ -226,23 +1538,284 @@
       if (mobileNovoTreino) {
         mobileNovoTreino.addEventListener('click', function(e) {
           e.preventDefault();
-          document.getElementById('btn-novo-treino')?.click();
+          closeMobileMenu();
+          setTimeout(() => document.getElementById('btn-novo-treino')?.click(), 300);
         });
       }
       if (mobileBiblioteca) {
         mobileBiblioteca.addEventListener('click', function(e) {
           e.preventDefault();
-          document.getElementById('btn-biblioteca')?.click();
+          closeMobileMenu();
+          setTimeout(() => document.getElementById('btn-biblioteca')?.click(), 300);
         });
       }
       if (mobileNovaAvaliacao) {
         mobileNovaAvaliacao.addEventListener('click', function(e) {
           e.preventDefault();
-          document.getElementById('btn-nova-avaliacao')?.click();
+          closeMobileMenu();
+          setTimeout(() => document.getElementById('btn-nova-avaliacao')?.click(), 300);
         });
       }
+      
+      // Close modal on click outside or X
+      document.getElementById('modal-close')?.addEventListener('click', fecharModal);
+      document.getElementById('modal-overlay')?.addEventListener('click', function(e) {
+        if (e.target === this) fecharModal();
+      });
+    });
+    
+    // Modal functions
+    function abrirModal(titulo, conteudo) {
+      const overlay = document.getElementById('modal-overlay');
+      const title = document.getElementById('modal-title');
+      const body = document.getElementById('modal-body');
+      
+      title.textContent = titulo;
+      body.innerHTML = conteudo;
+      overlay.classList.remove('hidden');
+      document.body.style.overflow = 'hidden';
+    }
+    
+    function fecharModal() {
+      const overlay = document.getElementById('modal-overlay');
+      overlay.classList.add('hidden');
+      document.body.style.overflow = '';
+    }
+    
+    function showToast(message, type = 'success', title = '') {
+      const container = document.getElementById('toast-container');
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.innerHTML = `
+        <div class="toast-content">
+          ${title ? `<span class="toast-title">${title}</span>` : ''}
+          <span>${message}</span>
+        </div>
+      `;
+      container.appendChild(toast);
+      setTimeout(() => {
+        toast.classList.add('fade-out');
+        setTimeout(() => toast.remove(), 300);
+      }, 4000);
+    }
+    
+    // Enviar Questionário
+    function abrirModalEnviarQuestionario(aluno) {
+      const conteudo = `
+        <div style="margin-bottom: 20px;">
+          <p style="color: var(--muted); margin-bottom: 16px; line-height: 1.6;">
+            Enviar questionário pré-avaliação para <strong style="color: #fff;">${aluno}</strong>
+          </p>
+          <label>Tipo de Avaliação</label>
+          <select id="tipo-avaliacao">
+            <option value="inicial">Avaliação Inicial</option>
+            <option value="trimestral">Reavaliação Trimestral</option>
+            <option value="semestral">Reavaliação Semestral</option>
+            <option value="retorno">Retorno de Lesão</option>
+          </select>
+          
+          <label>Observações (opcional)</label>
+          <textarea id="obs-questionario" rows="3" placeholder="Adicione observações para o aluno..."></textarea>
+        </div>
+        <div class="modal-footer">
+          <button class="btn outline" onclick="fecharModal()">Cancelar</button>
+          <button class="btn primary" onclick="enviarQuestionario('${aluno}')">
+            <i class="fa-solid fa-paper-plane"></i> Enviar Questionário
+          </button>
+        </div>
+      `;
+      abrirModal('Enviar Questionário', conteudo);
+    }
+    
+    function enviarQuestionario(aluno) {
+      const tipo = document.getElementById('tipo-avaliacao').value;
+      const obs = document.getElementById('obs-questionario').value;
+      
+      // Simular envio
+      fecharModal();
+      showToast(`Questionário de ${tipo} enviado para ${aluno}!`, 'success', 'Enviado!');
+      
+      // Remover alerta da lista
+      const alertaItem = document.querySelector('[data-alert-id="avaliacao"]');
+      if (alertaItem) {
+        alertaItem.style.opacity = '0';
+        alertaItem.style.transform = 'translateX(-20px)';
+        alertaItem.style.transition = 'all 0.3s ease';
+        setTimeout(() => alertaItem.remove(), 300);
+      }
+    }
+    
+    // Responder Feedback
+    function abrirModalResponderFeedback(element) {
+      const aluno = element.dataset.aluno;
+      const treino = element.dataset.treino;
+      const feedback = element.dataset.feedback;
+      
+      const conteudo = `
+        <div style="margin-bottom: 20px;">
+          <div style="background: rgba(0, 188, 212, 0.1); border: 1px solid rgba(0, 188, 212, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 10px; margin-bottom: 12px; flex-wrap: wrap;">
+              <i class="fa-solid fa-user-circle" style="font-size: 1.5rem; color: var(--accent); flex-shrink: 0;"></i>
+              <div style="min-width: 0; flex: 1;">
+                <strong style="color: #fff; display: block; word-break: break-word;">${aluno}</strong>
+                <span style="display: block; font-size: 0.8rem; color: var(--muted);">${treino}</span>
+              </div>
+            </div>
+            <p style="color: var(--text); font-size: 0.95rem; line-height: 1.6; padding: 12px; background: rgba(0,0,0,0.3); border-radius: 8px; word-break: break-word;">
+              "${feedback}"
+            </p>
+          </div>
+          
+          <label>Sua Resposta</label>
+          <textarea id="resposta-feedback" rows="4" placeholder="Digite sua resposta para o aluno..." style="resize: vertical;"></textarea>
+          
+          <div style="display: flex; gap: 12px; margin-top: 12px; flex-wrap: wrap;">
+            <label style="display: flex; align-items: center; gap: 8px; cursor: pointer; font-size: 0.9rem; flex: 1; min-width: 200px;">
+              <input type="checkbox" id="ajustar-treino" style="width: auto; margin: 0; flex-shrink: 0;">
+              <span>Marcar treino para ajuste</span>
+            </label>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn outline" onclick="fecharModal()">Cancelar</button>
+          <button class="btn primary" onclick="enviarRespostaFeedback('${aluno}')">
+            <i class="fa-solid fa-reply"></i> Enviar Resposta
+          </button>
+        </div>
+      `;
+      abrirModal('Responder Feedback', conteudo);
+    }
+    
+    function enviarRespostaFeedback(aluno) {
+      const resposta = document.getElementById('resposta-feedback').value;
+      const ajustarTreino = document.getElementById('ajustar-treino').checked;
+      
+      if (!resposta.trim()) {
+        showToast('Por favor, digite uma resposta.', 'warning', 'Atenção');
+        return;
+      }
+      
+      // Simular envio
+      fecharModal();
+      showToast(`Resposta enviada para ${aluno}!`, 'success', 'Enviado!');
+      
+      if (ajustarTreino) {
+        showToast('Treino marcado para ajuste.', 'info', 'Info');
+      }
+      
+      // Remover alerta da lista
+      const alertaItem = document.querySelector('[data-alert-id="feedback"]');
+      if (alertaItem) {
+        alertaItem.style.opacity = '0';
+        alertaItem.style.transform = 'translateX(-20px)';
+        alertaItem.style.transition = 'all 0.3s ease';
+        setTimeout(() => alertaItem.remove(), 300);
+      }
+    }
+    
+    // Treino Expirado
+    function abrirModalTreinoExpirado(element) {
+      const aluno = element.dataset.aluno;
+      const treinoId = element.dataset.treinoId;
+      
+      const conteudo = `
+        <div style="margin-bottom: 20px;">
+          <div style="background: rgba(239, 68, 68, 0.1); border: 1px solid rgba(239, 68, 68, 0.3); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+            <div style="display: flex; align-items: center; gap: 12px; flex-wrap: wrap;">
+              <i class="fa-solid fa-exclamation-triangle" style="font-size: 1.5rem; color: var(--danger); flex-shrink: 0;"></i>
+              <div style="min-width: 0; flex: 1;">
+                <strong style="color: #fff; display: block; word-break: break-word;">Treino de ${aluno} expirou!</strong>
+                <p style="font-size: 0.85rem; color: var(--muted); margin-top: 4px;">O treino precisa ser atualizado ou renovado.</p>
+              </div>
+            </div>
+          </div>
+          
+          <p style="color: var(--muted); margin-bottom: 20px; line-height: 1.6;">Escolha uma ação para resolver este alerta:</p>
+          
+          <div style="display: flex; flex-direction: column; gap: 12px;">
+            <button class="btn primary" onclick="criarNovoTreino('${aluno}')" style="width: 100%; justify-content: flex-start; padding: 16px 20px;">
+              <i class="fa-solid fa-plus"></i>
+              <div style="text-align: left; margin-left: 8px; min-width: 0; flex: 1;">
+                <strong style="display: block; word-break: break-word;">Criar Novo Treino</strong>
+                <span style="display: block; font-size: 0.8rem; opacity: 0.8; word-break: break-word;">Montar um treino do zero para o aluno</span>
+              </div>
+            </button>
+            
+            <button class="btn outline" onclick="renovarTreino('${aluno}', '${treinoId}')" style="width: 100%; justify-content: flex-start; padding: 16px 20px;">
+              <i class="fa-solid fa-rotate"></i>
+              <div style="text-align: left; margin-left: 8px; min-width: 0; flex: 1;">
+                <strong style="display: block; word-break: break-word;">Renovar Treino Atual</strong>
+                <span style="display: block; font-size: 0.8rem; opacity: 0.8; word-break: break-word;">Estender a validade do treino existente</span>
+              </div>
+            </button>
+            
+            <button class="btn outline" onclick="agendarAvaliacao('${aluno}')" style="width: 100%; justify-content: flex-start; padding: 16px 20px;">
+              <i class="fa-solid fa-calendar-plus"></i>
+              <div style="text-align: left; margin-left: 8px; min-width: 0; flex: 1;">
+                <strong style="display: block; word-break: break-word;">Agendar Avaliação</strong>
+                <span style="display: block; font-size: 0.8rem; opacity: 0.8; word-break: break-word;">Reavaliar o aluno antes de criar novo treino</span>
+              </div>
+            </button>
+          </div>
+        </div>
+        <div class="modal-footer">
+          <button class="btn outline" onclick="fecharModal()">Fechar</button>
+        </div>
+      `;
+      abrirModal('Treino Expirado', conteudo);
+    }
+    
+    function criarNovoTreino(aluno) {
+      fecharModal();
+      showToast(`Abrindo criação de treino para ${aluno}...`, 'info', 'Novo Treino');
+      
+      // Simular clique no botão de novo treino após um delay
+      setTimeout(() => {
+        document.getElementById('btn-novo-treino')?.click();
+      }, 500);
+      
+      // Remover alerta
+      removerAlertaExpirado();
+    }
+    
+    function renovarTreino(aluno, treinoId) {
+      fecharModal();
+      showToast(`Treino de ${aluno} renovado por mais 30 dias!`, 'success', 'Renovado!');
+      removerAlertaExpirado();
+    }
+    
+    function agendarAvaliacao(aluno) {
+      fecharModal();
+      showToast(`Abrindo agendamento de avaliação para ${aluno}...`, 'info', 'Agendar');
+      
+      // Simular clique no botão de nova avaliação
+      setTimeout(() => {
+        document.getElementById('btn-nova-avaliacao')?.click();
+      }, 500);
+      
+      removerAlertaExpirado();
+    }
+    
+    function removerAlertaExpirado() {
+      const alertaItem = document.querySelector('[data-alert-id="expirado"]');
+      if (alertaItem) {
+        alertaItem.style.opacity = '0';
+        alertaItem.style.transform = 'translateX(-20px)';
+        alertaItem.style.transition = 'all 0.3s ease';
+        setTimeout(() => alertaItem.remove(), 300);
+      }
+    }
+    
+    // Atualizar alertas
+    document.getElementById('btn-atualizar-alertas')?.addEventListener('click', function(e) {
+      e.preventDefault();
+      this.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Atualizando...';
+      setTimeout(() => {
+        this.innerHTML = '<i class="fa-solid fa-rotate"></i>Atualizar';
+        showToast('Alertas atualizados!', 'success', 'Atualizado');
+      }, 1000);
     });
   </script>
+  <script src="{% static 'js/professor-dashboard.js' %}"></script>
 </body>
 </html>
-

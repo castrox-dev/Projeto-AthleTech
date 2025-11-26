@@ -15,7 +15,8 @@ class UsuarioSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'email', 'first_name', 'last_name',
             'phone', 'birth_date', 'gender', 'role', 'is_active_member',
-            'created_at', 'password', 'password_confirm'
+            'created_at', 'password', 'password_confirm',
+            'especialidade', 'cref'
         ]
         extra_kwargs = {
             'password': {'write_only': True},
@@ -50,9 +51,10 @@ class UsuarioProfileSerializer(serializers.ModelSerializer):
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'birth_date', 'gender', 'role', 'is_active_member',
-            'is_superuser', 'created_at', 'updated_at'
+            'is_superuser', 'created_at', 'updated_at',
+            'especialidade', 'cref'
         ]
-        read_only_fields = ['id', 'username', 'created_at', 'updated_at', 'role', 'is_superuser']
+        read_only_fields = ['id', 'username', 'created_at', 'updated_at', 'is_superuser']
 
 class LoginSerializer(serializers.Serializer):
     """Serializer para login de usuários via API"""

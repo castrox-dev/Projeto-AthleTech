@@ -325,34 +325,259 @@
   };
 
   const openBibliotecaModal = async () => {
-    openModal('Biblioteca de Exercícios', '<p>Carregando exercícios...</p>');
+    openModal('Biblioteca de Exercícios', '<div style="text-align: center; padding: 40px;"><i class="fa-solid fa-spinner fa-spin" style="font-size: 2rem; color: var(--accent);"></i><p style="margin-top: 16px; color: var(--muted);">Carregando exercícios...</p></div>');
     try {
-      const data = await apiRequest(`${exerciciosEndpoint}?page_size=100`);
+      const data = await apiRequest(`${exerciciosEndpoint}?page_size=200`);
       const exercicios = Array.isArray(data) ? data : (data.results || []);
-      if (!exercicios.length) {
-        modalBody.innerHTML = '<div class="empty">Nenhum exercício cadastrado.</div>';
-        return;
-      }
-      const grid = document.createElement('div');
-      grid.className = 'exercise-grid';
-      exercicios.forEach((exercicio) => {
-        const card = document.createElement('div');
-        card.className = 'exercise-card';
-        card.innerHTML = `
-          <h4>${exercicio.nome}</h4>
-          <div class="exercise-meta">
-            <span>${exercicio.categoria}</span>
-            <span>${exercicio.nivel}</span>
-          </div>
-          <p>${exercicio.descricao || 'Sem descrição.'}</p>
-        `;
-        grid.appendChild(card);
-      });
+      
+      // Header com botão de criar
+      const header = document.createElement('div');
+      header.className = 'biblioteca-header';
+      header.innerHTML = `
+        <div class="biblioteca-search">
+          <i class="fa-solid fa-search"></i>
+          <input type="text" id="busca-exercicio" placeholder="Buscar exercício...">
+        </div>
+        <button type="button" class="btn primary" id="btn-criar-exercicio">
+          <i class="fa-solid fa-plus"></i> Novo Exercício
+        </button>
+      `;
+      
+      // Container da lista
+      const container = document.createElement('div');
+      container.className = 'biblioteca-container';
+      container.id = 'biblioteca-lista';
+      
+      const renderExercicios = (lista) => {
+        if (!lista.length) {
+          container.innerHTML = '<div class="empty" style="padding: 40px; text-align: center;"><i class="fa-solid fa-dumbbell" style="font-size: 2rem; opacity: 0.5; margin-bottom: 12px;"></i><p>Nenhum exercício encontrado.</p></div>';
+          return;
+        }
+        
+        container.innerHTML = '';
+        lista.forEach((exercicio) => {
+          const card = document.createElement('div');
+          card.className = 'exercise-card-full';
+          card.innerHTML = `
+            <div class="exercise-card-header">
+              <div class="exercise-card-info">
+                <h4>${exercicio.nome}</h4>
+                <div class="exercise-tags">
+                  <span class="tag categoria"><i class="fa-solid fa-layer-group"></i> ${exercicio.categoria || 'Sem categoria'}</span>
+                  <span class="tag nivel"><i class="fa-solid fa-signal"></i> ${exercicio.nivel || 'Iniciante'}</span>
+                  ${exercicio.equipamento ? `<span class="tag equipamento"><i class="fa-solid fa-dumbbell"></i> ${exercicio.equipamento}</span>` : ''}
+                </div>
+              </div>
+              <div class="exercise-card-actions">
+                ${exercicio.video_url ? `<a href="${exercicio.video_url}" target="_blank" class="btn-icon" title="Ver vídeo"><i class="fa-solid fa-play"></i></a>` : ''}
+                <button type="button" class="btn-icon btn-editar-exercicio" data-id="${exercicio.id}" title="Editar"><i class="fa-solid fa-pen"></i></button>
+              </div>
+            </div>
+            ${exercicio.descricao ? `<p class="exercise-desc">${exercicio.descricao}</p>` : ''}
+          `;
+          container.appendChild(card);
+        });
+      };
+      
+      renderExercicios(exercicios);
+      
       modalBody.innerHTML = '';
-      modalBody.appendChild(grid);
+      modalBody.appendChild(header);
+      modalBody.appendChild(container);
+      
+      // Event: Busca
+      const buscaInput = document.getElementById('busca-exercicio');
+      buscaInput?.addEventListener('input', (e) => {
+        const termo = e.target.value.toLowerCase();
+        const filtrados = exercicios.filter(ex => 
+          ex.nome.toLowerCase().includes(termo) ||
+          (ex.categoria && ex.categoria.toLowerCase().includes(termo)) ||
+          (ex.equipamento && ex.equipamento.toLowerCase().includes(termo))
+        );
+        renderExercicios(filtrados);
+        attachEditButtons();
+      });
+      
+      // Event: Criar exercício
+      document.getElementById('btn-criar-exercicio')?.addEventListener('click', () => {
+        openCriarExercicioForm();
+      });
+      
+      // Event: Editar exercícios
+      const attachEditButtons = () => {
+        document.querySelectorAll('.btn-editar-exercicio').forEach(btn => {
+          btn.addEventListener('click', (e) => {
+            const id = parseInt(e.currentTarget.dataset.id, 10);
+            const exercicio = exercicios.find(ex => ex.id === id);
+            if (exercicio) {
+              openEditarExercicioForm(exercicio);
+            }
+          });
+        });
+      };
+      attachEditButtons();
+      
     } catch (error) {
-      modalBody.innerHTML = `<div class="empty">Erro ao carregar exercícios: ${error.message}</div>`;
+      modalBody.innerHTML = `<div class="empty" style="padding: 40px; text-align: center;"><i class="fa-solid fa-exclamation-triangle" style="font-size: 2rem; color: var(--danger); margin-bottom: 12px;"></i><p>Erro ao carregar exercícios: ${error.message}</p></div>`;
     }
+  };
+  
+  const openCriarExercicioForm = () => {
+    const form = document.createElement('form');
+    form.id = 'form-criar-exercicio';
+    form.innerHTML = `
+      <div class="form-group">
+        <label for="exercicio-nome">Nome do Exercício *</label>
+        <input type="text" id="exercicio-nome" name="nome" placeholder="Ex.: Supino Reto com Barra" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="exercicio-categoria">Grupo Muscular *</label>
+          <select id="exercicio-categoria" name="categoria" required>
+            <option value="">Selecione...</option>
+            <option value="peito">Peito</option>
+            <option value="costas">Costas</option>
+            <option value="ombros">Ombros</option>
+            <option value="bracos">Braços</option>
+            <option value="pernas">Pernas</option>
+            <option value="gluteos">Glúteos</option>
+            <option value="abdomen">Abdômen</option>
+            <option value="cardio">Cardio</option>
+            <option value="funcional">Funcional</option>
+            <option value="outro">Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="exercicio-nivel">Nível</label>
+          <select id="exercicio-nivel" name="nivel">
+            <option value="iniciante">Iniciante</option>
+            <option value="intermediario">Intermediário</option>
+            <option value="avancado">Avançado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="exercicio-equipamento">Equipamento Necessário</label>
+        <input type="text" id="exercicio-equipamento" name="equipamento" placeholder="Ex.: Barra, Banco, Anilhas">
+      </div>
+      <div class="form-group">
+        <label for="exercicio-video">Link do Vídeo (YouTube)</label>
+        <input type="url" id="exercicio-video" name="video_url" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+      <div class="form-group">
+        <label for="exercicio-descricao">Descrição / Instruções</label>
+        <textarea id="exercicio-descricao" name="descricao" rows="3" placeholder="Descreva a execução correta do exercício..."></textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn outline" onclick="window.professorVoltarBiblioteca()">Cancelar</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-plus"></i> Criar Exercício</button>
+      </div>
+    `;
+    
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        nome: formData.get('nome'),
+        categoria: formData.get('categoria'),
+        nivel: formData.get('nivel') || 'iniciante',
+        equipamento: formData.get('equipamento') || '',
+        video_url: formData.get('video_url') || '',
+        descricao: formData.get('descricao') || '',
+      };
+      
+      try {
+        await apiRequest(exerciciosEndpoint, { method: 'POST', body: payload });
+        showToast('Exercício criado com sucesso!', 'success', 'Sucesso');
+        exerciciosCache = null; // Limpar cache
+        openBibliotecaModal(); // Recarregar biblioteca
+      } catch (error) {
+        showToast(error.message || 'Erro ao criar exercício', 'error', 'Erro');
+      }
+    });
+    
+    openModal('Novo Exercício', form);
+  };
+  
+  window.professorVoltarBiblioteca = () => {
+    openBibliotecaModal();
+  };
+  
+  const openEditarExercicioForm = (exercicio) => {
+    const form = document.createElement('form');
+    form.id = 'form-editar-exercicio';
+    form.innerHTML = `
+      <div class="form-group">
+        <label for="edit-exercicio-nome">Nome do Exercício *</label>
+        <input type="text" id="edit-exercicio-nome" name="nome" value="${exercicio.nome || ''}" required>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label for="edit-exercicio-categoria">Grupo Muscular *</label>
+          <select id="edit-exercicio-categoria" name="categoria" required>
+            <option value="">Selecione...</option>
+            <option value="peito" ${exercicio.categoria === 'peito' ? 'selected' : ''}>Peito</option>
+            <option value="costas" ${exercicio.categoria === 'costas' ? 'selected' : ''}>Costas</option>
+            <option value="ombros" ${exercicio.categoria === 'ombros' ? 'selected' : ''}>Ombros</option>
+            <option value="bracos" ${exercicio.categoria === 'bracos' ? 'selected' : ''}>Braços</option>
+            <option value="pernas" ${exercicio.categoria === 'pernas' ? 'selected' : ''}>Pernas</option>
+            <option value="gluteos" ${exercicio.categoria === 'gluteos' ? 'selected' : ''}>Glúteos</option>
+            <option value="abdomen" ${exercicio.categoria === 'abdomen' ? 'selected' : ''}>Abdômen</option>
+            <option value="cardio" ${exercicio.categoria === 'cardio' ? 'selected' : ''}>Cardio</option>
+            <option value="funcional" ${exercicio.categoria === 'funcional' ? 'selected' : ''}>Funcional</option>
+            <option value="outro" ${exercicio.categoria === 'outro' ? 'selected' : ''}>Outro</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label for="edit-exercicio-nivel">Nível</label>
+          <select id="edit-exercicio-nivel" name="nivel">
+            <option value="iniciante" ${exercicio.nivel === 'iniciante' ? 'selected' : ''}>Iniciante</option>
+            <option value="intermediario" ${exercicio.nivel === 'intermediario' ? 'selected' : ''}>Intermediário</option>
+            <option value="avancado" ${exercicio.nivel === 'avancado' ? 'selected' : ''}>Avançado</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-group">
+        <label for="edit-exercicio-equipamento">Equipamento Necessário</label>
+        <input type="text" id="edit-exercicio-equipamento" name="equipamento" value="${exercicio.equipamento || ''}" placeholder="Ex.: Barra, Banco, Anilhas">
+      </div>
+      <div class="form-group">
+        <label for="edit-exercicio-video">Link do Vídeo (YouTube)</label>
+        <input type="url" id="edit-exercicio-video" name="video_url" value="${exercicio.video_url || ''}" placeholder="https://www.youtube.com/watch?v=...">
+      </div>
+      <div class="form-group">
+        <label for="edit-exercicio-descricao">Descrição / Instruções</label>
+        <textarea id="edit-exercicio-descricao" name="descricao" rows="3" placeholder="Descreva a execução correta do exercício...">${exercicio.descricao || ''}</textarea>
+      </div>
+      <div class="modal-footer">
+        <button type="button" class="btn outline" onclick="window.professorVoltarBiblioteca()">Cancelar</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-check"></i> Salvar Alterações</button>
+      </div>
+    `;
+    
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        nome: formData.get('nome'),
+        categoria: formData.get('categoria'),
+        nivel: formData.get('nivel') || 'iniciante',
+        equipamento: formData.get('equipamento') || '',
+        video_url: formData.get('video_url') || '',
+        descricao: formData.get('descricao') || '',
+      };
+      
+      try {
+        await apiRequest(`${exerciciosEndpoint}${exercicio.id}/`, { method: 'PATCH', body: payload });
+        showToast('Exercício atualizado com sucesso!', 'success', 'Sucesso');
+        exerciciosCache = null; // Limpar cache
+        openBibliotecaModal(); // Recarregar biblioteca
+      } catch (error) {
+        showToast(error.message || 'Erro ao atualizar exercício', 'error', 'Erro');
+      }
+    });
+    
+    openModal(`Editar: ${exercicio.nome}`, form);
   };
 
   let exerciciosCache = null;

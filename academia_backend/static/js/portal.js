@@ -24,6 +24,131 @@ document.addEventListener('DOMContentLoaded', async function () {
   const getAccessToken = () => localStorage.getItem('access_token') || localStorage.getItem('accessToken');
   const getRefreshToken = () => localStorage.getItem('refresh_token') || localStorage.getItem('refreshToken');
 
+  // Função para mostrar/esconder o card do plano - função global
+  window.irParaPlano = function() {
+    const planoCard = document.getElementById('plano-atual-card');
+    
+    // Se não tem dados do plano carregados, vai para página de planos
+    if (!planoCard || planoCard.getAttribute('data-loaded') !== 'true') {
+      window.location.href = '/planos/';
+      return;
+    }
+    
+    // Toggle do card
+    if (planoCard.style.display === 'none') {
+      // Mostrar o card
+      planoCard.style.display = 'block';
+      // Rola até o card
+      setTimeout(() => {
+        planoCard.scrollIntoView({ behavior: 'smooth', block: 'center' });
+        // Efeito de destaque
+        planoCard.style.transition = 'box-shadow 0.3s ease';
+        planoCard.style.boxShadow = '0 0 30px rgba(251, 191, 36, 0.4)';
+        setTimeout(() => {
+          planoCard.style.boxShadow = '';
+        }, 1500);
+      }, 100);
+    } else {
+      // Esconder o card
+      planoCard.style.display = 'none';
+    }
+  };
+
+  // Função para preencher informações do plano atual
+  function preencherPlanoAtual(matricula) {
+    const planoCard = document.getElementById('plano-atual-card');
+    const planoQuickAction = document.getElementById('plano-quick-action');
+    const planoQuickNome = document.getElementById('plano-quick-nome');
+    
+    if (!matricula || !planoCard) return;
+    
+    // NÃO mostrar o card automaticamente, apenas carregar os dados
+    // O card será mostrado quando o usuário clicar em "Meu Plano"
+    planoCard.setAttribute('data-loaded', 'true');
+    
+    // Atualizar quick action
+    if (planoQuickAction) {
+      planoQuickAction.classList.add('has-plano');
+    }
+    
+    // Atualizar badge do nome no botão
+    if (planoQuickNome) {
+      planoQuickNome.textContent = matricula.plano_nome || 'Ativo';
+    }
+    
+    
+    // Nome do plano
+    const planoNome = document.getElementById('plano-nome-atual');
+    if (planoNome) {
+      planoNome.textContent = matricula.plano_nome || 'Plano Ativo';
+    }
+    
+    // Descrição do plano (baseado no nome)
+    const planoDescricao = document.getElementById('plano-descricao');
+    if (planoDescricao) {
+      const descricoes = {
+        'Básico': 'Acesso à musculação e cardio com treino de adaptação',
+        'Premium': 'Inclui acompanhamento mensal e aulas coletivas',
+        'Elite': 'Personal dedicado, nutricionista e área VIP',
+        'VIP': 'Acesso total com personal trainer dedicado'
+      };
+      planoDescricao.textContent = descricoes[matricula.plano_nome] || 'Plano completo com acesso às instalações';
+    }
+    
+    // Ícone do plano
+    const planoIcone = document.getElementById('plano-icone');
+    if (planoIcone) {
+      const nomeLower = (matricula.plano_nome || '').toLowerCase();
+      if (nomeLower.includes('premium')) {
+        planoIcone.classList.add('premium');
+        planoIcone.innerHTML = '<i class="fa-solid fa-fire-flame-curved"></i>';
+      } else if (nomeLower.includes('elite') || nomeLower.includes('vip')) {
+        planoIcone.classList.add('vip');
+        planoIcone.innerHTML = '<i class="fa-solid fa-gem"></i>';
+      } else {
+        planoIcone.innerHTML = '<i class="fa-solid fa-dumbbell"></i>';
+      }
+    }
+    
+    // Data início
+    const planoInicio = document.getElementById('plano-inicio');
+    if (planoInicio && matricula.data_inicio) {
+      const dataInicio = new Date(matricula.data_inicio);
+      planoInicio.textContent = dataInicio.toLocaleDateString('pt-BR');
+    }
+    
+    // Data fim
+    const planoFim = document.getElementById('plano-fim');
+    if (planoFim && matricula.data_fim) {
+      const dataFim = new Date(matricula.data_fim);
+      planoFim.textContent = dataFim.toLocaleDateString('pt-BR');
+    }
+    
+    // Dias restantes
+    const planoDias = document.getElementById('plano-dias-restantes');
+    if (planoDias && matricula.data_fim) {
+      const dataFim = new Date(matricula.data_fim);
+      const hoje = new Date();
+      const diffTime = dataFim - hoje;
+      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+      
+      if (diffDays > 0) {
+        planoDias.textContent = `${diffDays} dias`;
+        planoDias.style.color = diffDays < 7 ? '#fbbf24' : '#22c55e';
+      } else {
+        planoDias.textContent = 'Expirado';
+        planoDias.style.color = '#ef4444';
+        
+        // Atualizar badge para expirado
+        const badge = document.getElementById('plano-status-badge');
+        if (badge) {
+          badge.className = 'badge error';
+          badge.innerHTML = '<i class="fa-solid fa-exclamation-triangle"></i> Expirado';
+        }
+      }
+    }
+  }
+
   const buildHeaders = (extra = {}) => {
     const headers = { 'Content-Type': 'application/json', ...extra };
     const token = getAccessToken();
@@ -257,6 +382,12 @@ document.addEventListener('DOMContentLoaded', async function () {
       if (userNameElement) {
         userNameElement.textContent = nome;
       }
+      
+      // Update welcome name
+      const welcomeNameElement = document.getElementById('welcome-name');
+      if (welcomeNameElement) {
+        welcomeNameElement.textContent = data.usuario.first_name || nome.split(' ')[0] || 'Aluno';
+      }
 
       const loginElements = document.querySelectorAll('.login-only');
       const userElements = document.querySelectorAll('.user-only');
@@ -305,7 +436,15 @@ document.addEventListener('DOMContentLoaded', async function () {
     if (!data.matricula_ativa) {
       const warn = document.createElement('div');
       warn.className = 'card';
-      warn.innerHTML = '<h2>Assinatura necessária</h2><p class="muted">Nenhuma matrícula ativa encontrada. Conclua seu pagamento para liberar o portal.</p><div style="margin-top:8px;"><a href="/planos/" class="btn">Escolher plano</a></div>';
+      warn.style.cssText = 'text-align: center; padding: 48px 24px;';
+      warn.innerHTML = `
+        <div style="font-size: 4rem; margin-bottom: 20px;">🔒</div>
+        <h2 style="font-size: 1.5rem; margin-bottom: 12px; color: #e5e7eb;">Assinatura Necessária</h2>
+        <p class="muted" style="margin-bottom: 24px;">Nenhuma matrícula ativa encontrada.<br>Escolha um plano para liberar o acesso ao portal.</p>
+        <a href="/planos/" class="btn" style="padding: 14px 28px; font-size: 1rem;">
+          <i class="fa-solid fa-crown"></i> Ver Planos
+        </a>
+      `;
       const main = document.querySelector('main.content');
       if (main) {
         main.innerHTML = '';
@@ -333,25 +472,9 @@ document.addEventListener('DOMContentLoaded', async function () {
         document.getElementById('aluno-genero').textContent = generoMap[data.usuario.gender] || data.usuario.gender;
       }
       
-      // Status da matrícula
-      const matriculaEl = document.getElementById('aluno-matricula');
+      // Preencher card do plano atual
       if (data.matricula_ativa) {
-        if (data.matricula_ativa.data_fim) {
-          const dataFim = new Date(data.matricula_ativa.data_fim);
-          const formattedFim = dataFim.toLocaleDateString('pt-BR');
-          matriculaEl.innerHTML = `<span style="color: #4CAF50; white-space: nowrap;">Ativa</span><span class="muted">Até ${formattedFim}</span>`;
-        } else {
-          matriculaEl.innerHTML = '<span style="color: #4CAF50;">Ativa</span>';
-        }
-      } else {
-        matriculaEl.innerHTML = '<span style="color: #f44336;">Inativa</span>';
-      }
-      
-      // Membro ativo
-      if (data.usuario.is_active_member) {
-        document.getElementById('aluno-membro').innerHTML = '<span style="color: #4CAF50;">Sim</span>';
-      } else {
-        document.getElementById('aluno-membro').innerHTML = '<span style="color: #ff9800;">Não</span>';
+        preencherPlanoAtual(data.matricula_ativa);
       }
       
       // Data de cadastro
@@ -398,13 +521,12 @@ document.addEventListener('DOMContentLoaded', async function () {
           tabelaBody.innerHTML = '';
           
           if (!avaliacoesData.results || avaliacoesData.results.length === 0) {
-            tabelaBody.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">Nenhuma avaliação registrada ainda.</td></tr>';
+            tabelaBody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align: center; padding: 24px;">Nenhuma avaliação registrada ainda.</td></tr>';
           } else {
             avaliacoesData.results.forEach(av => {
               const dataAval = new Date(av.data_avaliacao);
               const formatKg = (value) => value ? `${parseFloat(value).toFixed(1)} kg` : '--';
               const formatPercent = (value) => value ? `${parseFloat(value).toFixed(1)}%` : '--';
-              const formatCm = (value) => value ? `${parseFloat(value).toFixed(1)} cm` : '--';
               const formatImc = (value) => value ? parseFloat(value).toFixed(1) : '--';
 
               const row = document.createElement('tr');
@@ -413,12 +535,6 @@ document.addEventListener('DOMContentLoaded', async function () {
                 <td>${formatKg(av.peso)}</td>
                 <td>${formatImc(av.imc)}</td>
                 <td>${formatPercent(av.percentual_gordura)}</td>
-                <td>${formatKg(av.massa_muscular)}</td>
-                <td>${formatCm(av.perimetro_peito)}</td>
-                <td>${formatCm(av.perimetro_cintura)}</td>
-                <td>${formatCm(av.perimetro_quadril)}</td>
-                <td>${formatCm(av.perimetro_braco)}</td>
-                <td>${formatCm(av.perimetro_coxa)}</td>
                 <td>${av.observacoes || '--'}</td>
               `;
               tabelaBody.appendChild(row);
@@ -430,7 +546,7 @@ document.addEventListener('DOMContentLoaded', async function () {
       console.error('Erro ao carregar avaliações:', e);
       const tabelaBody = document.querySelector('#tabela-avaliacoes tbody');
       if (tabelaBody) {
-        tabelaBody.innerHTML = '<tr><td colspan="11" class="muted" style="text-align: center;">Erro ao carregar avaliações.</td></tr>';
+        tabelaBody.innerHTML = '<tr><td colspan="5" class="muted" style="text-align: center; padding: 24px;">Erro ao carregar avaliações.</td></tr>';
       }
     }
 
