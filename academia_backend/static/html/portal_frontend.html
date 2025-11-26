@@ -11,6 +11,37 @@
   <link rel="stylesheet" href="{% static 'css/user-menu.css' %}">
   <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  
+  <!-- Verificação de role ANTES de carregar a página -->
+  <script>
+    (function() {
+      // Verificar imediatamente se o usuário é admin/professor
+      try {
+        const userData = localStorage.getItem('user_data');
+        if (userData) {
+          const user = JSON.parse(userData);
+          const role = user.role;
+          const isSuperuser = user.is_superuser;
+          
+          // Se for admin ou superuser, redirecionar IMEDIATAMENTE
+          if (role === 'admin' || isSuperuser) {
+            window.location.replace('/portal/admin/');
+            document.documentElement.style.display = 'none'; // Esconde a página
+            return;
+          }
+          
+          // Se for professor, redirecionar
+          if (role === 'professor') {
+            window.location.replace('/portal/professor/');
+            document.documentElement.style.display = 'none';
+            return;
+          }
+        }
+      } catch(e) {
+        console.error('Erro ao verificar role:', e);
+      }
+    })();
+  </script>
 </head>
 <body>
   <!-- Menu Mobile CSS Puro -->

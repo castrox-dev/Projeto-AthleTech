@@ -7,108 +7,697 @@
   <title>Planos e Preços - AthleTech</title>
   <meta name="description" content="Conheça os planos da AthleTech e escolha o melhor para você.">
   <link rel="icon" href="{% static 'images/favicon.ico' %}">
-  <link rel="stylesheet" href="{% static 'css/planos.css' %}">
-  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #0d1117 50%, #161b22 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    /* Animated background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+    }
+    
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 20% 80%, rgba(0, 31, 84, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(0, 102, 255, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 40%, rgba(0, 31, 84, 0.08) 0%, transparent 40%);
+      animation: rotate 30s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Floating particles */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(0, 102, 255, 0.4);
+      border-radius: 50%;
+      animation: float 15s infinite;
+    }
+    
+    .particle:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 20s; }
+    .particle:nth-child(2) { left: 20%; animation-delay: 2s; animation-duration: 18s; }
+    .particle:nth-child(3) { left: 30%; animation-delay: 4s; animation-duration: 22s; }
+    .particle:nth-child(4) { left: 40%; animation-delay: 1s; animation-duration: 16s; }
+    .particle:nth-child(5) { left: 50%; animation-delay: 3s; animation-duration: 19s; }
+    .particle:nth-child(6) { left: 60%; animation-delay: 5s; animation-duration: 21s; }
+    .particle:nth-child(7) { left: 70%; animation-delay: 2s; animation-duration: 17s; }
+    .particle:nth-child(8) { left: 80%; animation-delay: 4s; animation-duration: 23s; }
+    .particle:nth-child(9) { left: 90%; animation-delay: 1s; animation-duration: 20s; }
+    
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(90vh) scale(1);
+      }
+      90% {
+        opacity: 1;
+        transform: translateY(10vh) scale(1);
+      }
+      100% {
+        transform: translateY(0) scale(0);
+        opacity: 0;
+      }
+    }
+    
+    /* Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .brand {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .brand i {
+      color: rgb(0, 102, 255);
+      font-size: 1.4rem;
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .btn {
+      background: rgb(0, 31, 84);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .btn:hover {
+      background: rgb(0, 51, 133);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 102, 255, 0.25);
+    }
+    
+    .btn.outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e5e7eb;
+    }
+    
+    .btn.outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    
+    .user-only {
+      display: none;
+    }
+    
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .user-name {
+      color: #e5e7eb;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Main content */
+    main {
+      position: relative;
+      z-index: 10;
+      padding: 120px 24px 60px;
+      max-width: 1400px;
+      margin: 0 auto;
+    }
+    
+    /* Page header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 60px;
+    }
+    
+    .page-icon {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.2), rgba(0, 31, 84, 0.1));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse-icon 3s ease-in-out infinite;
+      border: 2px solid rgba(0, 102, 255, 0.3);
+    }
+    
+    .page-icon i {
+      font-size: 40px;
+      color: rgb(0, 102, 255);
+    }
+    
+    @keyframes pulse-icon {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(0, 102, 255, 0.1); }
+    }
+    
+    .page-title {
+      font-size: clamp(2rem, 5vw, 3rem);
+      font-weight: 800;
+      color: #e5e7eb;
+      margin-bottom: 16px;
+    }
+    
+    .page-title span {
+      background: linear-gradient(135deg, rgb(0, 102, 255) 0%, rgb(0, 153, 255) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    
+    .page-subtitle {
+      font-size: 1.1rem;
+      color: #9ca3af;
+      max-width: 600px;
+      margin: 0 auto;
+      line-height: 1.7;
+    }
+    
+    /* Plans grid */
+    .plans-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+      gap: 30px;
+      margin-top: 40px;
+    }
+    
+    /* Plan card */
+    .plan-card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 24px;
+      padding: 36px 28px;
+      backdrop-filter: blur(10px);
+      position: relative;
+      overflow: hidden;
+      transition: all 0.4s ease;
+    }
+    
+    .plan-card:hover {
+      transform: translateY(-8px);
+      border-color: rgba(0, 102, 255, 0.3);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4), 0 0 40px rgba(0, 102, 255, 0.1);
+    }
+    
+    .plan-card.featured {
+      border-color: rgba(0, 102, 255, 0.4);
+      background: linear-gradient(135deg, rgba(0, 31, 84, 0.2), rgba(0, 0, 0, 0.3));
+    }
+    
+    .plan-card.featured::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      height: 4px;
+      background: linear-gradient(90deg, rgb(0, 102, 255), rgb(0, 153, 255));
+    }
+    
+    .plan-badge {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      background: linear-gradient(135deg, rgb(0, 102, 255), rgb(0, 153, 255));
+      color: #fff;
+      padding: 6px 14px;
+      border-radius: 50px;
+      font-size: 0.75rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .plan-icon {
+      width: 60px;
+      height: 60px;
+      border-radius: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 20px;
+      font-size: 28px;
+    }
+    
+    .plan-card:nth-child(1) .plan-icon {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+      color: #22c55e;
+    }
+    
+    .plan-card:nth-child(2) .plan-icon {
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.2), rgba(0, 102, 255, 0.05));
+      color: #0066ff;
+    }
+    
+    .plan-card:nth-child(3) .plan-icon {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.05));
+      color: #a855f7;
+    }
+    
+    .plan-name {
+      font-size: 1.5rem;
+      font-weight: 700;
+      color: #e5e7eb;
+      margin-bottom: 8px;
+    }
+    
+    .plan-tagline {
+      color: #9ca3af;
+      font-size: 0.95rem;
+      font-style: italic;
+      margin-bottom: 24px;
+    }
+    
+    .plan-price {
+      display: flex;
+      align-items: baseline;
+      gap: 4px;
+      margin-bottom: 24px;
+    }
+    
+    .plan-price .currency {
+      font-size: 1.2rem;
+      font-weight: 600;
+      color: #9ca3af;
+    }
+    
+    .plan-price .amount {
+      font-size: 3rem;
+      font-weight: 800;
+      color: #e5e7eb;
+      line-height: 1;
+    }
+    
+    .plan-price .period {
+      font-size: 1rem;
+      color: #6b7280;
+    }
+    
+    .plan-features {
+      list-style: none;
+      margin-bottom: 32px;
+    }
+    
+    .plan-features li {
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      padding: 10px 0;
+      color: #cbd5e1;
+      font-size: 0.95rem;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+    }
+    
+    .plan-features li:last-child {
+      border-bottom: none;
+    }
+    
+    .plan-features li i {
+      color: #22c55e;
+      font-size: 0.9rem;
+      margin-top: 3px;
+      flex-shrink: 0;
+    }
+    
+    .plan-btn {
+      width: 100%;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+      text-decoration: none;
+    }
+    
+    .plan-btn.primary {
+      background: linear-gradient(135deg, rgb(0, 31, 84) 0%, rgb(0, 51, 133) 100%);
+      color: #fff;
+      border: none;
+    }
+    
+    .plan-btn.primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 102, 255, 0.3);
+    }
+    
+    .plan-btn.featured {
+      background: linear-gradient(135deg, rgb(0, 102, 255) 0%, rgb(0, 153, 255) 100%);
+      color: #fff;
+      border: none;
+    }
+    
+    .plan-btn.featured:hover {
+      box-shadow: 0 10px 40px rgba(0, 102, 255, 0.4);
+    }
+    
+    /* Footer */
+    .page-footer {
+      text-align: center;
+      margin-top: 60px;
+      padding: 40px 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+    }
+    
+    .page-footer p {
+      color: #6b7280;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+    }
+    
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      flex-wrap: wrap;
+    }
+    
+    .footer-links a {
+      color: #9ca3af;
+      text-decoration: none;
+      font-size: 0.9rem;
+      transition: color 0.2s ease;
+    }
+    
+    .footer-links a:hover {
+      color: rgb(0, 102, 255);
+    }
+    
+    /* Decorative elements */
+    .decoration {
+      position: fixed;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(0, 31, 84, 0.05));
+      filter: blur(40px);
+      z-index: 0;
+    }
+    
+    .decoration-1 {
+      width: 400px;
+      height: 400px;
+      top: 10%;
+      left: -5%;
+      animation: float-slow 8s ease-in-out infinite;
+    }
+    
+    .decoration-2 {
+      width: 300px;
+      height: 300px;
+      bottom: 10%;
+      right: -5%;
+      animation: float-slow 10s ease-in-out infinite reverse;
+    }
+    
+    @keyframes float-slow {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, -20px); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        padding: 12px 16px;
+      }
+      
+      .brand {
+        font-size: 1rem;
+      }
+      
+      .btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+      }
+      
+      main {
+        padding: 100px 16px 40px;
+      }
+      
+      .page-header {
+        margin-bottom: 40px;
+      }
+      
+      .page-icon {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .page-icon i {
+        font-size: 30px;
+      }
+      
+      .plans-grid {
+        grid-template-columns: 1fr;
+        gap: 20px;
+      }
+      
+      .plan-card {
+        padding: 28px 20px;
+      }
+      
+      .plan-price .amount {
+        font-size: 2.5rem;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header-actions .btn span {
+        display: none;
+      }
+      
+      .plan-card {
+        padding: 24px 18px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- Menu Mobile CSS Puro -->
-  <div class="mobile-nav-container">
-    <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
-    <div class="hamburger-lines">
-      <span class="line line1"></span>
-      <span class="line line2"></span>
-      <span class="line line3"></span>
-    </div>
-    <div class="mobile-logo">
-      <i class="fa-solid fa-dumbbell"></i>
-      <span>ATHLETECH</span>
-    </div>
-    <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
-    <ul class="mobile-menu-items">
-      <li class="menu-section">Navegação</li>
-      <li><a href="/"><i class="fa-solid fa-house"></i> Início</a></li>
-      <li><a href="/planos/" class="active"><i class="fa-solid fa-tags"></i> Planos</a></li>
-      <li class="menu-divider"></li>
-      <li class="menu-buttons">
-        <div class="login-only" style="display: flex; flex-direction: column; gap: 12px;">
-          <a href="/login/" class="btn-menu primary"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
-        </div>
-        <div class="user-only" style="display: none; flex-direction: column; gap: 12px;">
-          <div class="menu-user"><i class="fa-solid fa-user"></i> <span id="mobile-user-name">Usuário</span></div>
-          <a href="/portal/" class="btn-menu primary"><i class="fa-solid fa-gauge"></i> Portal</a>
-          <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
-            {% csrf_token %}
-            <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
-              <i class="fa-solid fa-right-from-bracket"></i> Sair
-            </button>
-          </form>
-        </div>
-      </li>
-    </ul>
+  <div class="bg-animation"></div>
+  
+  <div class="particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
   </div>
-
-  <header class="portal-header">
-    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Planos</div>
+  
+  <div class="decoration decoration-1"></div>
+  <div class="decoration decoration-2"></div>
+  
+  <header>
+    <div class="brand">
+      <i class="fa-solid fa-dumbbell"></i>
+      <span>AthleTech</span>
+    </div>
     <nav class="header-actions">
-      <a href="/" class="btn small">Início</a>
+      <a href="/" class="btn">
+        <i class="fa-solid fa-house"></i>
+        <span>Início</span>
+      </a>
       <div class="login-only">
-        <a href="/login/" class="btn small">Login</a>
+        <a href="/login/" class="btn outline">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Entrar</span>
+        </a>
       </div>
-      <div class="user-only" style="display: none;">
+      <div class="user-only">
         <div class="user-menu">
           <span id="user-name" class="user-name">Carregando...</span>
           <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
             {% csrf_token %}
-            <button type="submit" id="logout-btn" class="btn small alt" style="cursor: pointer;">Sair</button>
+            <button type="submit" id="logout-btn" class="btn outline" style="cursor: pointer;">
+              <i class="fa-solid fa-right-from-bracket"></i>
+              <span>Sair</span>
+            </button>
           </form>
         </div>
       </div>
     </nav>
   </header>
-
-  <main class="content" style="padding:20px">
-    <section class="card">
-      <h2>Planos</h2>
-      <div class="grid-3" style="margin-top:12px">
-        <div class="exercise">
-          <h3>Plano Básico</h3>
-          <p>"Comece sua evolução." <br>
-            <br>✔️ Acesso livre à musculação e cardio<br>
-            ✔️ Treino de adaptação personalizado<br>
-            ✔️ App AthleTech com dicas de treino</p>
-            <div class="preco-e-botao">
-              <strong>R$ 99,90/mês</strong>
-              <a href="/checkout/?plano_id=1&preco=99.90&tier=mensal" class="btn">Assinar</a>
-            </div>
-          </div>
-        <div class="exercise">
-          <h3>Plano Premium</h3>
-          <p>"Resultados rápidos, do seu jeito." <br>
-            <br>✔️ Todos os benefícios do Básico<br>
-            ✔️ Acompanhamento mensal com personal trainer<br>
-            ✔️ Aulas coletivas inclusas (funcional, HIIT, spinning)<br>
-            ✔️ Avaliação física trimestral</p>
-            <div class="preco-e-botao">
-              <strong>R$ 149,90/mês</strong>
-              <a href="/checkout/?plano_id=2&preco=149.90&tier=mensal" class="btn">Assinar</a>
-            </div>
-          </div>
-        <div class="exercise">
-          <h3>Plano Elite</h3>
-          <p>"Performance máxima, evolução sem limites." <br>
-            <br>✔️ Todos os benefícios do Premium<br>
-            ✔️ Personal trainer dedicado 2x por semana<br>
-            ✔️ Nutricionista parceiro com plano personalizado<br>
-            ✔️ Suplementação básica inclusa<br>
-            ✔️ Área VIP e treinos avançados</p>
-            <div class="preco-e-botao">
-              <strong>R$ 249,90/mês</strong>
-              <a href="/checkout/?plano_id=3&preco=249.90&tier=mensal" class="btn">Assinar</a>
-            </div>
-          </div>
+  
+  <main>
+    <div class="page-header">
+      <div class="page-icon">
+        <i class="fa-solid fa-crown"></i>
       </div>
-    </section>
+      <h1 class="page-title">Escolha seu <span>Plano</span></h1>
+      <p class="page-subtitle">
+        Invista no seu corpo, invista em você. Escolha o plano ideal e comece sua transformação hoje mesmo.
+      </p>
+    </div>
+    
+    <div class="plans-grid">
+      <!-- Plano Básico -->
+      <div class="plan-card">
+        <div class="plan-icon">
+          <i class="fa-solid fa-dumbbell"></i>
+        </div>
+        <h3 class="plan-name">Básico</h3>
+        <p class="plan-tagline">"Comece sua evolução."</p>
+        <div class="plan-price">
+          <span class="currency">R$</span>
+          <span class="amount">99</span>
+          <span class="period">,90/mês</span>
+        </div>
+        <ul class="plan-features">
+          <li><i class="fa-solid fa-check"></i> Acesso livre à musculação e cardio</li>
+          <li><i class="fa-solid fa-check"></i> Treino de adaptação personalizado</li>
+          <li><i class="fa-solid fa-check"></i> App AthleTech com dicas de treino</li>
+          <li><i class="fa-solid fa-check"></i> Armário individual</li>
+        </ul>
+        <a href="/checkout/?plano_id=1&preco=99.90&tier=mensal" class="plan-btn primary">
+          <i class="fa-solid fa-bolt"></i>
+          Começar Agora
+        </a>
+      </div>
+      
+      <!-- Plano Premium -->
+      <div class="plan-card featured">
+        <span class="plan-badge">Mais Popular</span>
+        <div class="plan-icon">
+          <i class="fa-solid fa-fire"></i>
+        </div>
+        <h3 class="plan-name">Premium</h3>
+        <p class="plan-tagline">"Resultados rápidos, do seu jeito."</p>
+        <div class="plan-price">
+          <span class="currency">R$</span>
+          <span class="amount">149</span>
+          <span class="period">,90/mês</span>
+        </div>
+        <ul class="plan-features">
+          <li><i class="fa-solid fa-check"></i> Todos os benefícios do Básico</li>
+          <li><i class="fa-solid fa-check"></i> Acompanhamento mensal com personal</li>
+          <li><i class="fa-solid fa-check"></i> Aulas coletivas (funcional, HIIT, spinning)</li>
+          <li><i class="fa-solid fa-check"></i> Avaliação física trimestral</li>
+          <li><i class="fa-solid fa-check"></i> Desconto em suplementos parceiros</li>
+        </ul>
+        <a href="/checkout/?plano_id=2&preco=149.90&tier=mensal" class="plan-btn featured">
+          <i class="fa-solid fa-rocket"></i>
+          Escolher Premium
+        </a>
+      </div>
+      
+      <!-- Plano Elite -->
+      <div class="plan-card">
+        <div class="plan-icon">
+          <i class="fa-solid fa-gem"></i>
+        </div>
+        <h3 class="plan-name">Elite</h3>
+        <p class="plan-tagline">"Performance máxima, evolução sem limites."</p>
+        <div class="plan-price">
+          <span class="currency">R$</span>
+          <span class="amount">249</span>
+          <span class="period">,90/mês</span>
+        </div>
+        <ul class="plan-features">
+          <li><i class="fa-solid fa-check"></i> Todos os benefícios do Premium</li>
+          <li><i class="fa-solid fa-check"></i> Personal trainer dedicado 2x por semana</li>
+          <li><i class="fa-solid fa-check"></i> Nutricionista com plano personalizado</li>
+          <li><i class="fa-solid fa-check"></i> Suplementação básica inclusa</li>
+          <li><i class="fa-solid fa-check"></i> Área VIP e treinos avançados</li>
+          <li><i class="fa-solid fa-check"></i> Acesso 24 horas</li>
+        </ul>
+        <a href="/checkout/?plano_id=3&preco=249.90&tier=mensal" class="plan-btn primary">
+          <i class="fa-solid fa-crown"></i>
+          Ser Elite
+        </a>
+      </div>
+    </div>
+    
+    <footer class="page-footer">
+      <p>Todos os planos incluem acesso ilimitado às instalações durante o horário de funcionamento.</p>
+      <div class="footer-links">
+        <a href="/"><i class="fa-solid fa-house"></i> Início</a>
+        <a href="/login/"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
+        <a href="/cadastro/"><i class="fa-solid fa-user-plus"></i> Cadastre-se</a>
+      </div>
+    </footer>
   </main>
   
   <script>
@@ -117,7 +706,5 @@
     };
   </script>
   <script src="{% static 'js/user-menu.js' %}"></script>
-  <script src="{% static 'js/mobile-menu.js' %}"></script>
 </body>
 </html>
-

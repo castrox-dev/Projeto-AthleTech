@@ -4,104 +4,609 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Checkout</title>
+  <title>Checkout - AthleTech</title>
+  <meta name="description" content="Finalize sua assinatura AthleTech">
   <link rel="icon" href="{% static 'images/favicon.ico' %}">
-  <link rel="stylesheet" href="{% static 'css/portal.css' %}">
-  <link rel="stylesheet" href="{% static 'css/responsive.css' %}">
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #0d1117 50%, #161b22 100%);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+    
+    /* Animated background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+    }
+    
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 20% 80%, rgba(0, 31, 84, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(34, 197, 94, 0.08) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 40%, rgba(0, 31, 84, 0.08) 0%, transparent 40%);
+      animation: rotate 30s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .brand {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .brand i {
+      color: rgb(0, 102, 255);
+      font-size: 1.4rem;
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .btn {
+      background: rgb(0, 31, 84);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    .btn:hover {
+      background: rgb(0, 51, 133);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 102, 255, 0.25);
+    }
+    
+    .btn.outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e5e7eb;
+    }
+    
+    .btn.outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    
+    .user-only { display: none; }
+    
+    .user-menu {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .user-name {
+      color: #e5e7eb;
+      font-weight: 500;
+      font-size: 0.9rem;
+      padding: 8px 12px;
+      background: rgba(255,255,255,0.05);
+      border-radius: 8px;
+      border: 1px solid rgba(255,255,255,0.1);
+    }
+    
+    /* Main content */
+    main {
+      position: relative;
+      z-index: 10;
+      padding: 120px 24px 60px;
+      max-width: 900px;
+      margin: 0 auto;
+    }
+    
+    /* Page header */
+    .page-header {
+      text-align: center;
+      margin-bottom: 40px;
+    }
+    
+    .page-icon {
+      width: 80px;
+      height: 80px;
+      margin: 0 auto 20px;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse-icon 3s ease-in-out infinite;
+      border: 2px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .page-icon i {
+      font-size: 36px;
+      color: #22c55e;
+    }
+    
+    @keyframes pulse-icon {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(34, 197, 94, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(34, 197, 94, 0.1); }
+    }
+    
+    .page-title {
+      font-size: clamp(1.8rem, 5vw, 2.2rem);
+      font-weight: 700;
+      color: #e5e7eb;
+      margin-bottom: 10px;
+    }
+    
+    .page-subtitle {
+      font-size: 1rem;
+      color: #9ca3af;
+    }
+    
+    /* Cards */
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 28px;
+      backdrop-filter: blur(10px);
+      margin-bottom: 24px;
+    }
+    
+    .card-header {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      margin-bottom: 20px;
+    }
+    
+    .card-header-icon {
+      width: 48px;
+      height: 48px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 22px;
+    }
+    
+    .card-header-icon.blue {
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.2), rgba(0, 102, 255, 0.05));
+      color: #0066ff;
+    }
+    
+    .card-header-icon.green {
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.2), rgba(34, 197, 94, 0.05));
+      color: #22c55e;
+    }
+    
+    .card-header-icon.purple {
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.2), rgba(168, 85, 247, 0.05));
+      color: #a855f7;
+    }
+    
+    .card h2 {
+      font-size: 1.3rem;
+      font-weight: 600;
+      color: #e5e7eb;
+    }
+    
+    /* Order summary */
+    .order-summary {
+      display: grid;
+      gap: 16px;
+    }
+    
+    .order-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px 0;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+    }
+    
+    .order-item:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+    
+    .order-item .label {
+      color: #9ca3af;
+      font-size: 0.95rem;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .order-item .label i {
+      color: #6b7280;
+      width: 20px;
+    }
+    
+    .order-item .value {
+      font-weight: 600;
+      color: #e5e7eb;
+      font-size: 1rem;
+    }
+    
+    .order-item.total {
+      background: rgba(34, 197, 94, 0.1);
+      margin: 16px -20px -20px;
+      padding: 18px 20px;
+      border-radius: 0 0 16px 16px;
+      border-bottom: none;
+    }
+    
+    .order-item.total .label {
+      color: #22c55e;
+      font-weight: 600;
+    }
+    
+    .order-item.total .value {
+      color: #22c55e;
+      font-size: 1.3rem;
+    }
+    
+    /* Payment methods */
+    .payment-description {
+      color: #9ca3af;
+      font-size: 0.9rem;
+      margin-bottom: 20px;
+      line-height: 1.6;
+    }
+    
+    .payment-btn {
+      width: 100%;
+      padding: 16px 24px;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 12px;
+      transition: all 0.3s ease;
+      font-family: 'Poppins', sans-serif;
+      border: none;
+    }
+    
+    .payment-btn.card-btn {
+      background: linear-gradient(135deg, #a855f7 0%, #7c3aed 100%);
+      color: #fff;
+    }
+    
+    .payment-btn.card-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(168, 85, 247, 0.3);
+    }
+    
+    .payment-btn.pix-btn {
+      background: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+      color: #fff;
+    }
+    
+    .payment-btn.pix-btn:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(34, 197, 94, 0.3);
+    }
+    
+    .payment-btn:disabled {
+      opacity: 0.6;
+      cursor: not-allowed;
+      transform: none !important;
+    }
+    
+    /* Security badge */
+    .security-badge {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 12px;
+      color: #6b7280;
+      font-size: 0.8rem;
+    }
+    
+    .security-badge i {
+      color: #22c55e;
+    }
+    
+    /* Footer actions */
+    .footer-actions {
+      display: flex;
+      gap: 12px;
+      margin-top: 32px;
+      flex-wrap: wrap;
+    }
+    
+    .footer-actions .btn {
+      flex: 1;
+      min-width: 150px;
+      justify-content: center;
+    }
+    
+    /* Loading spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Decorative elements */
+    .decoration {
+      position: fixed;
+      border-radius: 50%;
+      filter: blur(40px);
+      z-index: 0;
+    }
+    
+    .decoration-1 {
+      width: 300px;
+      height: 300px;
+      top: 20%;
+      left: -5%;
+      background: linear-gradient(135deg, rgba(34, 197, 94, 0.1), rgba(34, 197, 94, 0.02));
+      animation: float-slow 8s ease-in-out infinite;
+    }
+    
+    .decoration-2 {
+      width: 250px;
+      height: 250px;
+      bottom: 15%;
+      right: -5%;
+      background: linear-gradient(135deg, rgba(168, 85, 247, 0.1), rgba(168, 85, 247, 0.02));
+      animation: float-slow 10s ease-in-out infinite reverse;
+    }
+    
+    @keyframes float-slow {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, -20px); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        padding: 12px 16px;
+      }
+      
+      .brand {
+        font-size: 1rem;
+      }
+      
+      .btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+      }
+      
+      main {
+        padding: 100px 16px 40px;
+      }
+      
+      .card {
+        padding: 20px;
+      }
+      
+      .order-item.total {
+        margin: 16px -12px -12px;
+        padding: 14px 12px;
+      }
+      
+      .footer-actions {
+        flex-direction: column;
+      }
+      
+      .footer-actions .btn {
+        width: 100%;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header-actions .btn span {
+        display: none;
+      }
+      
+      .page-icon {
+        width: 60px;
+        height: 60px;
+      }
+      
+      .page-icon i {
+        font-size: 28px;
+      }
+    }
+  </style>
 </head>
 <body>
-  <!-- Menu Mobile CSS Puro -->
-  <div class="mobile-nav-container">
-    <input class="menu-checkbox" type="checkbox" id="menu-toggle" />
-    <div class="hamburger-lines">
-      <span class="line line1"></span>
-      <span class="line line2"></span>
-      <span class="line line3"></span>
-    </div>
-    <div class="mobile-logo">
+  <div class="bg-animation"></div>
+  <div class="decoration decoration-1"></div>
+  <div class="decoration decoration-2"></div>
+  
+  <header>
+    <div class="brand">
       <i class="fa-solid fa-dumbbell"></i>
-      <span>ATHLETECH</span>
+      <span>AthleTech</span>
     </div>
-    <div class="menu-overlay" onclick="document.getElementById('menu-toggle').checked = false;"></div>
-    <ul class="mobile-menu-items">
-      <li class="menu-section">Navegação</li>
-      <li><a href="/"><i class="fa-solid fa-house"></i> Início</a></li>
-      <li><a href="/portal/"><i class="fa-solid fa-gauge"></i> Portal</a></li>
-      <li><a href="/planos/"><i class="fa-solid fa-tags"></i> Planos</a></li>
-      <li class="menu-divider"></li>
-      <li class="menu-buttons">
-        <div class="login-only" style="display: flex; flex-direction: column; gap: 12px;">
-          <a href="/login/" class="btn-menu primary"><i class="fa-solid fa-right-to-bracket"></i> Login</a>
-        </div>
-        <div class="user-only" style="display: none; flex-direction: column; gap: 12px;">
-          <div class="menu-user"><i class="fa-solid fa-user"></i> <span id="mobile-user-name">Usuário</span></div>
-          <form method="POST" action="{% url 'logout' %}" style="margin: 0;">
-            {% csrf_token %}
-            <button type="submit" class="btn-menu secondary" style="width: 100%; cursor: pointer;">
-              <i class="fa-solid fa-right-from-bracket"></i> Sair
-            </button>
-          </form>
-        </div>
-      </li>
-    </ul>
-  </div>
-
-  <header class="portal-header">
-    <div class="brand"><i class="fa-solid fa-dumbbell"></i> AthleTech • Checkout</div>
     <nav class="header-actions">
-      <a href="/" class="btn small">Início</a>
+      <a href="/planos/" class="btn outline">
+        <i class="fa-solid fa-arrow-left"></i>
+        <span>Voltar</span>
+      </a>
       <div class="login-only">
-        <a href="/login/" class="btn small">Login</a>
+        <a href="/login/" class="btn">
+          <i class="fa-solid fa-right-to-bracket"></i>
+          <span>Entrar</span>
+        </a>
       </div>
-      <div class="user-only" style="display: none;">
+      <div class="user-only">
         <div class="user-menu">
           <span id="user-name" class="user-name">Carregando...</span>
           <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
             {% csrf_token %}
-            <button type="submit" id="logout-btn" class="btn small alt" style="cursor: pointer;">Sair</button>
+            <button type="submit" id="logout-btn" class="btn outline" style="cursor: pointer;">
+              <i class="fa-solid fa-right-from-bracket"></i>
+            </button>
           </form>
         </div>
       </div>
     </nav>
   </header>
-
-  <main class="content" style="max-width:900px;margin:24px auto;">
+  
+  <main>
+    <div class="page-header">
+      <div class="page-icon">
+        <i class="fa-solid fa-cart-shopping"></i>
+      </div>
+      <h1 class="page-title">Finalizar Assinatura</h1>
+      <p class="page-subtitle">Revise seu pedido e escolha a forma de pagamento</p>
+    </div>
+    
+    <!-- Resumo do Pedido -->
     <section class="card">
-      <h2>Resumo do pedido</h2>
-      <ul class="kv">
-        <li><span>Plano</span><strong id="ck_plano">-</strong></li>
-        <li><span>Preço</span><strong id="ck_preco">R$ -</strong></li>
-        <li><span>Duração</span><strong id="ck_duracao">- dias</strong></li>
-        <li><span>Método</span><strong id="ck_metodo">-</strong></li>
-      </ul>
+      <div class="card-header">
+        <div class="card-header-icon blue">
+          <i class="fa-solid fa-receipt"></i>
+        </div>
+        <h2>Resumo do Pedido</h2>
+      </div>
+      <div class="order-summary">
+        <div class="order-item">
+          <span class="label"><i class="fa-solid fa-tag"></i> Plano</span>
+          <span class="value" id="ck_plano">Carregando...</span>
+        </div>
+        <div class="order-item">
+          <span class="label"><i class="fa-solid fa-calendar"></i> Duração</span>
+          <span class="value" id="ck_duracao">- dias</span>
+        </div>
+        <div class="order-item">
+          <span class="label"><i class="fa-solid fa-repeat"></i> Tipo</span>
+          <span class="value" id="ck_metodo">Mensal</span>
+        </div>
+        <div class="order-item total">
+          <span class="label"><i class="fa-solid fa-coins"></i> Total</span>
+          <span class="value" id="ck_preco">R$ --,--</span>
+        </div>
+      </div>
     </section>
-
+    
+    <!-- Cartão de Crédito -->
     <section class="card" id="sec_cartao">
-      <h2>Cartão de crédito</h2>
-      <p class="muted">Você será redirecionado para o site do Mercado Pago para concluir o pagamento de forma segura.</p>
-      <button id="btn_pagar_cartao" class="btn">Pagar com Cartão</button>
+      <div class="card-header">
+        <div class="card-header-icon purple">
+          <i class="fa-solid fa-credit-card"></i>
+        </div>
+        <h2>Cartão de Crédito</h2>
+      </div>
+      <p class="payment-description">
+        Pagamento processado de forma segura pelo Mercado Pago. 
+        Você será redirecionado para concluir a transação.
+      </p>
+      <button id="btn_pagar_cartao" class="payment-btn card-btn">
+        <i class="fa-solid fa-credit-card"></i>
+        Pagar com Cartão
+      </button>
+      <div class="security-badge">
+        <i class="fa-solid fa-shield-halved"></i>
+        Pagamento 100% seguro
+      </div>
     </section>
-
+    
+    <!-- PIX -->
     <section class="card" id="sec_pix">
-      <h2>PIX</h2>
-      <p class="muted">Você será redirecionado para o site do Mercado Pago para gerar e pagar o QR Code PIX.</p>
-      <button id="btn_gerar_pix" class="btn">Pagar com PIX</button>
+      <div class="card-header">
+        <div class="card-header-icon green">
+          <i class="fa-brands fa-pix"></i>
+        </div>
+        <h2>PIX</h2>
+      </div>
+      <p class="payment-description">
+        Pagamento instantâneo via PIX. Você será redirecionado para o Mercado Pago 
+        para gerar o QR Code e finalizar o pagamento.
+      </p>
+      <button id="btn_gerar_pix" class="payment-btn pix-btn">
+        <i class="fa-brands fa-pix"></i>
+        Pagar com PIX
+      </button>
+      <div class="security-badge">
+        <i class="fa-solid fa-bolt"></i>
+        Aprovação instantânea
+      </div>
     </section>
-
-    <div style="margin-top:16px;display:flex;gap:8px;">
-      <a href="/portal/" class="btn alt">Voltar ao Portal</a>
-      <a href="/" class="btn">Voltar ao Início</a>
+    
+    <!-- Footer Actions -->
+    <div class="footer-actions">
+      <a href="/planos/" class="btn outline">
+        <i class="fa-solid fa-arrow-left"></i>
+        Ver outros planos
+      </a>
+      <a href="/" class="btn">
+        <i class="fa-solid fa-house"></i>
+        Ir para o Início
+      </a>
     </div>
   </main>
-
+  
   <script>
     window.API_CONFIG = {
       API_BASE_URL: "/api"
     };
   </script>
   <script src="{% static 'js/user-menu.js' %}"></script>
-  <script src="{% static 'js/mobile-menu.js' %}"></script>
   <script src="{% static 'js/config.js' %}"></script>
   <script src="{% static 'js/checkout.js' %}"></script>
 </body>

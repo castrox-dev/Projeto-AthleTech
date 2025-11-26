@@ -119,52 +119,31 @@ document.addEventListener('DOMContentLoaded', function() {
                 
                 AuthUtils.showMessage('Login realizado com sucesso! Redirecionando...', 'success');
                 
-                // Redirecionar imediatamente (sem delay para evitar interferências)
-                // Usar redirect_url da resposta da API se disponível, caso contrário usar portal
-                let redirectTo = '/portal/';
-                
-                console.log('Dados completos da resposta:', data);
-                console.log('redirect_url recebido:', data.redirect_url);
-                console.log('Role do usuário:', data.user ? data.user.role : 'N/A');
-                console.log('Is superuser:', data.user ? data.user.is_superuser : 'N/A');
-                
-                // Verificar role do usuário para garantir redirecionamento correto
+                // Determinar redirecionamento baseado PRIMEIRO no role do usuário
+                // O role do usuário é a fonte de verdade para o destino
                 const userRole = data.user ? data.user.role : null;
                 const isSuperuser = data.user ? data.user.is_superuser : false;
                 
-                // Sempre usar redirect_url da API se disponível
-                if (data.redirect_url) {
-                    // redirect_url vem do Django reverse(), que retorna apenas o path (ex: /portal/admin/)
-                    redirectTo = String(data.redirect_url).trim();
-                    console.log('Usando redirect_url da API:', redirectTo);
-                    
-                    // Verificação adicional: se o redirect_url não corresponde ao role, corrigir
-                    if (userRole === 'professor' && !redirectTo.includes('/portal/professor/')) {
-                        console.warn('Login.js: redirect_url não corresponde ao role professor, corrigindo...');
-                        redirectTo = '/portal/professor/';
-                    } else if ((userRole === 'admin' || isSuperuser) && !redirectTo.includes('/portal/admin/')) {
-                        console.warn('Login.js: redirect_url não corresponde ao role admin, corrigindo...');
-                        redirectTo = '/portal/admin/';
-                    }
+                let redirectTo;
+                
+                console.log('Login.js - Role:', userRole, '| Superuser:', isSuperuser);
+                
+                // Determinar destino baseado no role (prioridade máxima)
+                if (userRole === 'admin' || isSuperuser) {
+                    redirectTo = '/portal/admin/';
+                    console.log('Login.js: Redirecionando admin para:', redirectTo);
+                } else if (userRole === 'professor') {
+                    redirectTo = '/portal/professor/';
+                    console.log('Login.js: Redirecionando professor para:', redirectTo);
                 } else {
-                    // Se não houver redirect_url, determinar baseado no role do usuário
-                    if (userRole === 'admin' || isSuperuser) {
-                        redirectTo = '/portal/admin/';
-                        console.log('Usando redirecionamento baseado em role (admin):', redirectTo);
-                    } else if (userRole === 'professor') {
-                        redirectTo = '/portal/professor/';
-                        console.log('Usando redirecionamento baseado em role (professor):', redirectTo);
+                    // Para alunos, verificar se há redirect na URL
+                    const urlRedirect = new URLSearchParams(window.location.search).get('redirect');
+                    if (urlRedirect && !urlRedirect.includes('/admin') && !urlRedirect.includes('/professor')) {
+                        redirectTo = urlRedirect.startsWith('/') ? urlRedirect : '/' + urlRedirect;
+                        console.log('Login.js: Usando redirect da URL:', redirectTo);
                     } else {
-                        // Verificar parâmetro redirect na URL
-                        const urlRedirect = new URLSearchParams(window.location.search).get('redirect');
-                        if (urlRedirect) {
-                            redirectTo = urlRedirect.startsWith('/') ? urlRedirect : '/' + urlRedirect;
-                            console.log('Usando redirect da URL:', redirectTo);
-                        } else {
-                            // Fallback: sempre redirecionar para portal do aluno
-                            redirectTo = '/portal/';
-                            console.log('Usando fallback para portal do aluno');
-                        }
+                        redirectTo = '/portal/';
+                        console.log('Login.js: Redirecionando aluno para portal');
                     }
                 }
                 

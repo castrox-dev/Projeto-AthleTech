@@ -38,106 +38,21 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   })();
 
-  // Se tier for mensal, mostrar ambos os métodos (PIX e Cartão)
-  // Se não especificar método ou for mensal, permitir escolha
-  const isMensal = tier === 'mensal';
-  const allowBothMethods = isMensal && (!method || method === 'escolher');
+  // Mostrar ambos os métodos de pagamento (cards já estão bem desenhados na página)
+  // O usuário escolhe clicando diretamente no botão de pagamento desejado
+  secCartao.style.display = 'block';
+  secPix.style.display = 'block';
   
-  if (allowBothMethods) {
-    // Mostrar ambos os métodos e adicionar seletor
-    secCartao.style.display = 'block';
-    secPix.style.display = 'block';
-    ckMetodo.textContent = 'Escolha o método de pagamento';
-    
-    // Adicionar seletor de método antes das seções
-    const resumoCard = document.querySelector('.card');
-    if (resumoCard && !document.getElementById('method_selector')) {
-      const selector = document.createElement('div');
-      selector.id = 'method_selector';
-      selector.className = 'field';
-      selector.style.marginTop = '16px';
-      selector.style.padding = '16px';
-      selector.style.background = 'rgba(255, 255, 255, 0.03)';
-      selector.style.border = '1px solid rgba(255, 255, 255, 0.08)';
-      selector.style.borderRadius = '12px';
-      selector.innerHTML = `
-        <label style="display: block; margin-bottom: 12px; font-weight: 600; color: var(--text, #e5e7eb);">Escolha o método de pagamento:</label>
-        <div style="display: flex; gap: 16px; flex-wrap: wrap;">
-          <label class="radio-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; transition: all 0.2s;">
-            <input type="radio" name="payment_method_choice" value="pix" checked style="accent-color: rgb(0, 31, 84); cursor: pointer;">
-            <span style="color: var(--text, #e5e7eb);">PIX</span>
-          </label>
-          <label class="radio-option" style="display: flex; align-items: center; gap: 8px; cursor: pointer; padding: 10px 16px; background: rgba(255, 255, 255, 0.05); border: 1px solid rgba(255, 255, 255, 0.08); border-radius: 10px; transition: all 0.2s;">
-            <input type="radio" name="payment_method_choice" value="cartao" style="accent-color: rgb(0, 31, 84); cursor: pointer;">
-            <span style="color: var(--text, #e5e7eb);">Cartão de Crédito</span>
-          </label>
-        </div>
-      `;
-      resumoCard.appendChild(selector);
-      
-      // Adicionar estilos de hover e checked
-      const radioOptions = selector.querySelectorAll('.radio-option');
-      radioOptions.forEach(option => {
-        const radio = option.querySelector('input[type="radio"]');
-        
-        // Hover effect
-        option.addEventListener('mouseenter', function() {
-          if (!radio.checked) {
-            this.style.background = 'rgba(255, 255, 255, 0.08)';
-            this.style.borderColor = 'rgba(255, 255, 255, 0.12)';
-          }
-        });
-        
-        option.addEventListener('mouseleave', function() {
-          if (!radio.checked) {
-            this.style.background = 'rgba(255, 255, 255, 0.05)';
-            this.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-          }
-        });
-        
-        // Checked state
-        const updateCheckedState = () => {
-          radioOptions.forEach(opt => {
-            const r = opt.querySelector('input[type="radio"]');
-            if (r.checked) {
-              opt.style.background = 'rgba(0, 31, 84, 0.3)';
-              opt.style.borderColor = 'rgba(0, 31, 84, 0.5)';
-            } else {
-              opt.style.background = 'rgba(255, 255, 255, 0.05)';
-              opt.style.borderColor = 'rgba(255, 255, 255, 0.08)';
-            }
-          });
-        };
-        
-        radio.addEventListener('change', updateCheckedState);
-        updateCheckedState(); // Inicializar estado
-      });
-      
-      // Adicionar listener para mostrar/esconder métodos
-      const radios = selector.querySelectorAll('input[type="radio"]');
-      radios.forEach(radio => {
-        radio.addEventListener('change', function() {
-          if (this.value === 'pix') {
-            secPix.style.display = 'block';
-            secCartao.style.display = 'none';
-            ckMetodo.textContent = 'PIX';
-          } else {
-            secCartao.style.display = 'block';
-            secPix.style.display = 'none';
-            ckMetodo.textContent = 'Cartão de crédito';
-          }
-        });
-      });
-      
-      // Inicializar com PIX selecionado
-      secCartao.style.display = 'none';
-      ckMetodo.textContent = 'PIX';
-    }
+  // Se method foi especificado na URL, mostrar apenas ele
+  if (method === 'pix') {
+    secCartao.style.display = 'none';
+    ckMetodo.textContent = 'PIX';
+  } else if (method === 'cartao') {
+    secPix.style.display = 'none';
+    ckMetodo.textContent = 'Cartão de Crédito';
   } else {
-    // Método específico foi escolhido, mostrar apenas ele
-    ckMetodo.textContent = (window.SALES_CONFIG.labels[method] || method);
-    secCartao.style.display = method === 'cartao' ? 'block' : 'none';
-    secPix.style.display = method === 'pix' ? 'block' : 'none';
+    // Mostrar ambos, sem seletor extra
+    ckMetodo.textContent = 'PIX ou Cartão';
   }
 
   // Botão de pagar cartão - Redireciona para Mercado Pago

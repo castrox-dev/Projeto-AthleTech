@@ -241,37 +241,9 @@ document.addEventListener('DOMContentLoaded', async function () {
       console.log('ℹ️ Usuário já possui matrícula ativa, pulando verificação de pagamento');
     }
 
-    // Verificar role do usuário e redirecionar se necessário
-    // Mas apenas se estiver na página do aluno (/portal/) e não for aluno
-    const currentPath = window.location.pathname;
+    // Nota: O redirecionamento baseado em role é feito no login.js
+    // Este código foi removido para evitar redirecionamento duplo
     const user = data.usuario || {};
-    const userRole = user.role;
-    const isSuperuser = user.is_superuser || false;
-    
-    // Só redirecionar se estiver na página do aluno (/portal/) e não for aluno
-    // E se não houver redirecionamento em progresso
-    if ((currentPath === '/portal/' || currentPath === '/portal') && !window.portalRedirectInProgress) {
-      // Se for admin ou superuser, redirecionar para dashboard do admin
-      if (userRole === 'admin' || isSuperuser) {
-        console.log('Portal.js: Usuário é admin na página do aluno, redirecionando para dashboard do admin');
-        window.portalRedirectInProgress = true;
-        // Usar setTimeout para evitar loops
-        setTimeout(() => {
-          window.location.replace('/portal/admin/');
-        }, 50);
-        return;
-      }
-      
-      // Se for professor, redirecionar para dashboard do professor
-      if (userRole === 'professor') {
-        console.log('Portal.js: Usuário é professor na página do aluno, redirecionando para dashboard do professor');
-        window.portalRedirectInProgress = true;
-        setTimeout(() => {
-          window.location.replace('/portal/professor/');
-        }, 50);
-        return;
-      }
-    }
 
     // Fill profile
     if (data.usuario) {

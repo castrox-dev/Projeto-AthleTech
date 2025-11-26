@@ -1,107 +1,620 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Recuperar senha</title>
-    <meta name="description" content="Recuperar senha - AthleTech">
-    <link rel="icon" href="/static/images/favicon.ico">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css">
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;600&display=swap');
-        * { box-sizing: border-box; margin: 0; padding: 0; }
-        body { font-family: 'Poppins', sans-serif; background: #0d0d0d; color: #f8fafc; }
-        .forgot-container { min-height: 100vh; display: grid; place-items: center; padding: 24px; }
-        .card { width: 100%; max-width: 520px; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.08); border-radius: 16px; padding: 28px; backdrop-filter: blur(6px); box-shadow: rgba(0, 0, 0, 0.4) 0px 10px 30px; }
-        .card-header { text-align: center; display: grid; gap: 8px; margin-bottom: 18px; }
-        .logo { color: rgb(0,31,84); font-size: 20px; }
-        .card-header h1 { font-size: 1.6rem; }
-        .card-header p { color: #cbd5e1; font-size: .95rem; }
-        .form { display: grid; gap: 16px; }
-        .input-group { display: grid; gap: 6px; }
-        .input-group label { font-size: .9rem; color: #cbd5e1; }
-        .input-field { display: flex; align-items: center; gap: 10px; background: #0f1115; border: 1px solid #1f2937; border-radius: 10px; padding: 10px 12px; }
-        .input-field i { color: #9ca3af; }
-        .input-field input { flex: 1; background: transparent; border: none; outline: none; color: #f8fafc; font-size: 1rem; }
-        .input-field input::placeholder { color: #94a3b8; }
-        .btn-primary { width: 100%; border: none; border-radius: 10px; padding: 12px 16px; background: rgb(0,31,84); color: #fff; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 10px; transition: background .2s ease; }
-        .btn-primary:hover { background: rgb(0, 42, 114); }
-        .btn-primary:disabled { opacity: .7; cursor: not-allowed; }
-        .card-footer { margin-top: 14px; display: flex; justify-content: space-between; }
-        .link { color: #93c5fd; text-decoration: none; }
-        .link:hover { text-decoration: underline; }
-        #message { margin-top: 10px; color: #cbd5e1; font-size: .95rem; }
-        @media (max-width: 420px) { .card { padding: 20px; } }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Recuperar Senha - AthleTech</title>
+  <meta name="description" content="Recuperar senha - AthleTech">
+  <link rel="icon" href="{% static 'images/favicon.ico' %}">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800;900&display=swap');
+    
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: 'Poppins', sans-serif;
+      background: linear-gradient(135deg, #0a0a0a 0%, #0d1117 50%, #161b22 100%);
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow-x: hidden;
+    }
+    
+    /* Animated background */
+    .bg-animation {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      overflow: hidden;
+    }
+    
+    .bg-animation::before {
+      content: '';
+      position: absolute;
+      top: -50%;
+      left: -50%;
+      width: 200%;
+      height: 200%;
+      background: radial-gradient(circle at 20% 80%, rgba(0, 31, 84, 0.15) 0%, transparent 50%),
+                  radial-gradient(circle at 80% 20%, rgba(0, 102, 255, 0.1) 0%, transparent 50%),
+                  radial-gradient(circle at 40% 40%, rgba(0, 31, 84, 0.08) 0%, transparent 40%);
+      animation: rotate 30s linear infinite;
+    }
+    
+    @keyframes rotate {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Floating particles */
+    .particles {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 1;
+      pointer-events: none;
+    }
+    
+    .particle {
+      position: absolute;
+      width: 4px;
+      height: 4px;
+      background: rgba(0, 102, 255, 0.4);
+      border-radius: 50%;
+      animation: float 15s infinite;
+    }
+    
+    .particle:nth-child(1) { left: 10%; animation-delay: 0s; animation-duration: 20s; }
+    .particle:nth-child(2) { left: 20%; animation-delay: 2s; animation-duration: 18s; }
+    .particle:nth-child(3) { left: 30%; animation-delay: 4s; animation-duration: 22s; }
+    .particle:nth-child(4) { left: 40%; animation-delay: 1s; animation-duration: 16s; }
+    .particle:nth-child(5) { left: 50%; animation-delay: 3s; animation-duration: 19s; }
+    .particle:nth-child(6) { left: 60%; animation-delay: 5s; animation-duration: 21s; }
+    .particle:nth-child(7) { left: 70%; animation-delay: 2s; animation-duration: 17s; }
+    .particle:nth-child(8) { left: 80%; animation-delay: 4s; animation-duration: 23s; }
+    .particle:nth-child(9) { left: 90%; animation-delay: 1s; animation-duration: 20s; }
+    
+    @keyframes float {
+      0%, 100% {
+        transform: translateY(100vh) scale(0);
+        opacity: 0;
+      }
+      10% {
+        opacity: 1;
+        transform: translateY(90vh) scale(1);
+      }
+      90% {
+        opacity: 1;
+        transform: translateY(10vh) scale(1);
+      }
+      100% {
+        transform: translateY(0) scale(0);
+        opacity: 0;
+      }
+    }
+    
+    /* Header */
+    header {
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(12px);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+      padding: 16px 24px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    
+    .brand {
+      font-weight: 700;
+      font-size: 1.25rem;
+      color: #e5e7eb;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    
+    .brand i {
+      color: rgb(0, 102, 255);
+      font-size: 1.4rem;
+    }
+    
+    .header-actions {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    
+    .btn {
+      background: rgb(0, 31, 84);
+      color: #fff;
+      padding: 10px 20px;
+      border-radius: 10px;
+      text-decoration: none;
+      font-size: 0.95rem;
+      font-weight: 500;
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      transition: all 0.3s ease;
+      border: none;
+      cursor: pointer;
+    }
+    
+    .btn:hover {
+      background: rgb(0, 51, 133);
+      transform: translateY(-2px);
+      box-shadow: 0 8px 25px rgba(0, 102, 255, 0.25);
+    }
+    
+    .btn.outline {
+      background: transparent;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      color: #e5e7eb;
+    }
+    
+    .btn.outline:hover {
+      background: rgba(255, 255, 255, 0.05);
+      border-color: rgba(255, 255, 255, 0.25);
+    }
+    
+    /* Main content */
+    main {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 120px 24px 60px;
+      position: relative;
+      z-index: 10;
+    }
+    
+    .recover-container {
+      width: 100%;
+      max-width: 480px;
+    }
+    
+    /* Icon animation */
+    .page-icon {
+      width: 90px;
+      height: 90px;
+      margin: 0 auto 24px;
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.2), rgba(0, 31, 84, 0.1));
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      animation: pulse-icon 3s ease-in-out infinite;
+      border: 2px solid rgba(0, 102, 255, 0.3);
+    }
+    
+    .page-icon i {
+      font-size: 40px;
+      color: rgb(0, 102, 255);
+    }
+    
+    @keyframes pulse-icon {
+      0%, 100% { transform: scale(1); box-shadow: 0 0 0 0 rgba(0, 102, 255, 0.4); }
+      50% { transform: scale(1.05); box-shadow: 0 0 30px 10px rgba(0, 102, 255, 0.1); }
+    }
+    
+    .page-title {
+      font-size: clamp(1.8rem, 5vw, 2.2rem);
+      font-weight: 700;
+      color: #e5e7eb;
+      text-align: center;
+      margin-bottom: 12px;
+    }
+    
+    .page-subtitle {
+      font-size: 1rem;
+      color: #9ca3af;
+      text-align: center;
+      line-height: 1.6;
+      margin-bottom: 36px;
+    }
+    
+    /* Card */
+    .card {
+      background: rgba(255, 255, 255, 0.03);
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: 20px;
+      padding: 32px;
+      backdrop-filter: blur(10px);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.4);
+    }
+    
+    /* Form */
+    .form {
+      display: flex;
+      flex-direction: column;
+      gap: 20px;
+    }
+    
+    .input-group {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+    
+    .input-group label {
+      font-size: 0.9rem;
+      color: #cbd5e1;
+      font-weight: 500;
+    }
+    
+    .input-field {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: rgba(15, 17, 21, 0.8);
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      border-radius: 12px;
+      padding: 14px 16px;
+      transition: all 0.3s ease;
+    }
+    
+    .input-field:focus-within {
+      border-color: rgb(0, 102, 255);
+      box-shadow: 0 0 0 3px rgba(0, 102, 255, 0.15);
+    }
+    
+    .input-field i {
+      color: #6b7280;
+      font-size: 1.1rem;
+      transition: color 0.3s ease;
+    }
+    
+    .input-field:focus-within i {
+      color: rgb(0, 102, 255);
+    }
+    
+    .input-field input {
+      flex: 1;
+      background: transparent;
+      border: none;
+      outline: none;
+      color: #f8fafc;
+      font-size: 1rem;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    .input-field input::placeholder {
+      color: #6b7280;
+    }
+    
+    /* Submit button */
+    .btn-submit {
+      width: 100%;
+      padding: 16px 24px;
+      background: linear-gradient(135deg, rgb(0, 31, 84) 0%, rgb(0, 51, 133) 100%);
+      color: #fff;
+      border: none;
+      border-radius: 12px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: all 0.3s ease;
+      font-family: 'Poppins', sans-serif;
+    }
+    
+    .btn-submit:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 30px rgba(0, 102, 255, 0.3);
+    }
+    
+    .btn-submit:disabled {
+      opacity: 0.7;
+      cursor: not-allowed;
+      transform: none;
+    }
+    
+    /* Message */
+    .message {
+      padding: 14px 18px;
+      border-radius: 10px;
+      font-size: 0.9rem;
+      display: none;
+      align-items: center;
+      gap: 10px;
+      animation: fadeIn 0.3s ease;
+    }
+    
+    .message.show {
+      display: flex;
+    }
+    
+    .message.success {
+      background: rgba(34, 197, 94, 0.1);
+      border: 1px solid rgba(34, 197, 94, 0.2);
+      color: #4ade80;
+    }
+    
+    .message.error {
+      background: rgba(239, 68, 68, 0.1);
+      border: 1px solid rgba(239, 68, 68, 0.2);
+      color: #f87171;
+    }
+    
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(-10px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+    
+    /* Card footer */
+    .card-footer {
+      margin-top: 24px;
+      padding-top: 20px;
+      border-top: 1px solid rgba(255, 255, 255, 0.08);
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+    
+    .link {
+      color: #93c5fd;
+      text-decoration: none;
+      font-size: 0.9rem;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+    }
+    
+    .link:hover {
+      color: #60a5fa;
+      text-decoration: underline;
+    }
+    
+    /* Decorative elements */
+    .decoration {
+      position: absolute;
+      border-radius: 50%;
+      background: linear-gradient(135deg, rgba(0, 102, 255, 0.1), rgba(0, 31, 84, 0.05));
+      filter: blur(40px);
+      z-index: -1;
+    }
+    
+    .decoration-1 {
+      width: 300px;
+      height: 300px;
+      top: 15%;
+      left: 5%;
+      animation: float-slow 8s ease-in-out infinite;
+    }
+    
+    .decoration-2 {
+      width: 200px;
+      height: 200px;
+      bottom: 15%;
+      right: 10%;
+      animation: float-slow 10s ease-in-out infinite reverse;
+    }
+    
+    @keyframes float-slow {
+      0%, 100% { transform: translate(0, 0); }
+      50% { transform: translate(20px, -20px); }
+    }
+    
+    /* Loading spinner */
+    .spinner {
+      width: 20px;
+      height: 20px;
+      border: 2px solid rgba(255, 255, 255, 0.3);
+      border-top-color: #fff;
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+    
+    @keyframes spin {
+      to { transform: rotate(360deg); }
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+      header {
+        padding: 12px 16px;
+      }
+      
+      .brand {
+        font-size: 1rem;
+      }
+      
+      .btn {
+        padding: 8px 16px;
+        font-size: 0.85rem;
+      }
+      
+      main {
+        padding: 100px 16px 40px;
+      }
+      
+      .card {
+        padding: 24px;
+      }
+      
+      .page-icon {
+        width: 70px;
+        height: 70px;
+      }
+      
+      .page-icon i {
+        font-size: 30px;
+      }
+      
+      .card-footer {
+        flex-direction: column;
+        text-align: center;
+      }
+    }
+    
+    @media (max-width: 480px) {
+      .header-actions .btn span {
+        display: none;
+      }
+      
+      .card {
+        padding: 20px;
+      }
+    }
+  </style>
 </head>
 <body>
-    <header class="portal-header" style="position: fixed; top: 0; left: 0; right: 0; z-index: 1000; background: rgba(0,0,0,0.8); backdrop-filter: blur(6px); border-bottom: 1px solid rgba(255,255,255,0.1); padding: 12px 20px; display: flex; justify-content: space-between; align-items: center;">
-      <div class="brand" style="font-weight: 700; color: #e5e7eb;"><i class="fa-solid fa-dumbbell"></i> AthleTech • Recuperar Senha</div>
-      <nav class="header-actions" style="display: flex; align-items: center; gap: 12px;">
-        <a href="/" class="btn small" style="background: rgb(0,31,84); color: #fff; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Início</a>
-        <div class="login-only">
-          <a href="/login/" class="btn small" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; text-decoration: none; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem;">Login</a>
-        </div>
-        <div class="user-only" style="display: none;">
-          <div class="user-menu" style="display: flex; align-items: center; gap: 8px;">
-            <span id="user-name" class="user-name" style="color: #e5e7eb; font-weight: 500; font-size: 0.9rem; padding: 8px 12px; background: rgba(255,255,255,0.05); border-radius: 8px; border: 1px solid rgba(255,255,255,0.1);">Carregando...</span>
-        <form method="POST" action="{% url 'logout' %}" style="display: inline; margin: 0;">
-          {% csrf_token %}
-          <button type="submit" id="logout-btn" class="btn small alt" style="background: transparent; border: 1px solid rgba(255,255,255,0.1); color: #e5e7eb; padding: 8px 10px; border-radius: 10px; display: inline-flex; gap: 8px; align-items: center; font-size: 0.9rem; cursor: pointer;">Sair</button>
-        </form>
-          </div>
-        </div>
-      </nav>
-    </header>
+  <div class="bg-animation"></div>
+  
+  <div class="particles">
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+    <div class="particle"></div>
+  </div>
+  
+  <header>
+    <div class="brand">
+      <i class="fa-solid fa-dumbbell"></i>
+      <span>AthleTech</span>
+    </div>
+    <nav class="header-actions">
+      <a href="/" class="btn">
+        <i class="fa-solid fa-house"></i>
+        <span>Início</span>
+      </a>
+      <a href="/login/" class="btn outline">
+        <i class="fa-solid fa-right-to-bracket"></i>
+        <span>Entrar</span>
+      </a>
+    </nav>
+  </header>
+  
+  <main>
+    <div class="decoration decoration-1"></div>
+    <div class="decoration decoration-2"></div>
     
-    <main class="forgot-container" style="margin-top: 80px;">
-        <section class="card">
-            <header class="card-header">
-                <i class="fa-solid fa-dumbbell logo">AthleTech</i>
-                <h1>Recuperar senha</h1>
-                <p>Informe seu e-mail para enviarmos o link de redefinição.</p>
-            </header>
-
-            <form id="recuperarSenhaForm" class="form">
-                <div class="input-group">
-                    <label for="email">E-mail</label>
-                    <div class="input-field">
-                        <i class="fa-regular fa-envelope"></i>
-                        <input type="email" id="email" name="email" placeholder="usuario@email.com" required>
-                    </div>
-                </div>
-
-                <button type="submit" class="btn-primary">
-                    <i class="fa-solid fa-paper-plane"></i>
-                    Enviar link
-                </button>
-
-                <div id="message"></div>
-            </form>
-
-            <footer class="card-footer">
-                <a href="/login/" class="link">Voltar ao login</a>
-                <a href="/" class="link">Ir para o início</a>
-            </footer>
-        </section>
-    </main>
-
-    <script>
-      window.API_CONFIG = {
-        API_BASE_URL: "/api"
-      };
-    </script>
-    <script src="/static/js/user-menu.js"></script>
-    <script>
-        document.getElementById('recuperarSenhaForm').addEventListener('submit', function(e){
-            e.preventDefault();
-            const btn = this.querySelector('.btn-primary');
-            btn.disabled = true; btn.textContent = 'Enviando...';
-            setTimeout(()=>{
-                btn.disabled = false; btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar link';
-                document.getElementById('message').textContent = 'Se o e-mail existir, enviaremos um link de recuperação.';
-            }, 800);
+    <div class="recover-container">
+      <div class="page-icon">
+        <i class="fa-solid fa-key"></i>
+      </div>
+      
+      <h1 class="page-title">Recuperar Senha</h1>
+      <p class="page-subtitle">
+        Informe seu e-mail cadastrado e enviaremos um link para redefinir sua senha.
+      </p>
+      
+      <div class="card">
+        <form id="recuperarSenhaForm" class="form">
+          <div class="input-group">
+            <label for="email">E-mail</label>
+            <div class="input-field">
+              <i class="fa-regular fa-envelope"></i>
+              <input type="email" id="email" name="email" placeholder="seu@email.com" required>
+            </div>
+          </div>
+          
+          <div id="message" class="message">
+            <i class="fa-solid fa-circle-check"></i>
+            <span></span>
+          </div>
+          
+          <button type="submit" class="btn-submit" id="submitBtn">
+            <i class="fa-solid fa-paper-plane"></i>
+            Enviar Link de Recuperação
+          </button>
+        </form>
+        
+        <footer class="card-footer">
+          <a href="/login/" class="link">
+            <i class="fa-solid fa-arrow-left"></i>
+            Voltar ao login
+          </a>
+          <a href="/cadastro/" class="link">
+            <i class="fa-solid fa-user-plus"></i>
+            Criar conta
+          </a>
+        </footer>
+      </div>
+    </div>
+  </main>
+  
+  <script>
+    document.getElementById('recuperarSenhaForm').addEventListener('submit', async function(e) {
+      e.preventDefault();
+      
+      const btn = document.getElementById('submitBtn');
+      const message = document.getElementById('message');
+      const messageText = message.querySelector('span');
+      const messageIcon = message.querySelector('i');
+      const email = document.getElementById('email').value;
+      
+      // Disable button and show loading
+      btn.disabled = true;
+      btn.innerHTML = '<div class="spinner"></div> Enviando...';
+      
+      // Hide previous message
+      message.classList.remove('show', 'success', 'error');
+      
+      try {
+        // Call API
+        const response = await fetch('/api/auth/password-reset/', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({ email: email })
         });
-    </script>
+        
+        const data = await response.json();
+        
+        if (response.ok) {
+          // Show success message
+          message.classList.add('show', 'success');
+          messageIcon.className = 'fa-solid fa-circle-check';
+          messageText.textContent = 'Se o e-mail existir em nossa base, você receberá um link de recuperação em instantes.';
+          
+          // Clear input
+          document.getElementById('email').value = '';
+        } else {
+          // Show error message
+          message.classList.add('show', 'error');
+          messageIcon.className = 'fa-solid fa-circle-exclamation';
+          messageText.textContent = data.message || data.error || 'Erro ao enviar. Tente novamente.';
+        }
+      } catch (error) {
+        // Show error message
+        message.classList.add('show', 'error');
+        messageIcon.className = 'fa-solid fa-circle-exclamation';
+        messageText.textContent = 'Erro de conexão. Verifique sua internet e tente novamente.';
+      } finally {
+        // Reset button
+        btn.disabled = false;
+        btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar Link de Recuperação';
+      }
+    });
+  </script>
 </body>
 </html>

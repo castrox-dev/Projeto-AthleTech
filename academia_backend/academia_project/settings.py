@@ -9,7 +9,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = config('SECRET_KEY', default='dev-secret-key-change-me')
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)
 
 # ALLOWED_HOSTS - aceita domínios do Railway automaticamente
 ALLOWED_HOSTS = config(
