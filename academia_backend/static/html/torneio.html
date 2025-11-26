@@ -493,6 +493,109 @@
     .hidden { display: none !important; }
     .text-center { text-align: center; }
     
+    /* Toast Notifications */
+    #toast-container {
+      position: fixed;
+      top: 90px;
+      right: 20px;
+      z-index: 9999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: 380px;
+    }
+    
+    .toast {
+      background: rgba(10, 10, 20, 0.98);
+      backdrop-filter: blur(15px);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 14px;
+      padding: 16px 20px;
+      display: flex;
+      align-items: flex-start;
+      gap: 12px;
+      box-shadow: 0 15px 50px rgba(0, 0, 0, 0.7),
+                  0 5px 20px rgba(0, 0, 0, 0.5),
+                  0 0 0 1px rgba(255, 255, 255, 0.08),
+                  inset 0 1px 0 rgba(255, 255, 255, 0.1);
+      animation: slideIn 0.3s ease;
+      min-width: 300px;
+      position: relative;
+    }
+    
+    .toast.hiding {
+      animation: slideOut 0.3s ease forwards;
+    }
+    
+    @keyframes slideIn {
+      from { transform: translateX(100%); opacity: 0; }
+      to { transform: translateX(0); opacity: 1; }
+    }
+    
+    @keyframes slideOut {
+      from { transform: translateX(0); opacity: 1; }
+      to { transform: translateX(100%); opacity: 0; }
+    }
+    
+    .toast-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 1rem;
+      flex-shrink: 0;
+    }
+    
+    .toast.success .toast-icon { background: rgba(34, 197, 94, 0.2); color: #22c55e; }
+    .toast.error .toast-icon { background: rgba(239, 68, 68, 0.2); color: #ef4444; }
+    .toast.warning .toast-icon { background: rgba(234, 179, 8, 0.2); color: #eab308; }
+    .toast.info .toast-icon { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+    
+    .toast-content { flex: 1; }
+    .toast-title { font-weight: 600; font-size: 0.95rem; color: #fff; margin-bottom: 2px; }
+    .toast-message { font-size: 0.85rem; color: #9ca3af; line-height: 1.4; }
+    
+    .toast-close {
+      background: none;
+      border: none;
+      color: #9ca3af;
+      cursor: pointer;
+      padding: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      border-radius: 4px;
+      transition: all 0.2s ease;
+      font-size: 0.9rem;
+    }
+    
+    .toast-close:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: #fff;
+    }
+    
+    .toast-progress {
+      position: absolute;
+      bottom: 0;
+      left: 0;
+      height: 3px;
+      background: rgba(251, 191, 36, 0.5);
+      border-radius: 0 0 14px 14px;
+      animation: progressBar linear forwards;
+    }
+    
+    .toast.success .toast-progress { background: rgba(34, 197, 94, 0.5); }
+    .toast.error .toast-progress { background: rgba(239, 68, 68, 0.5); }
+    .toast.warning .toast-progress { background: rgba(234, 179, 8, 0.5); }
+    .toast.info .toast-progress { background: rgba(59, 130, 246, 0.5); }
+    
+    @keyframes progressBar {
+      from { width: 100%; }
+      to { width: 0%; }
+    }
+    
     /* Empty State */
     .empty-state {
       text-align: center;
@@ -890,7 +993,7 @@
         <div class="card">
           <div class="card-head">
             <h2><i class="fa-solid fa-info-circle"></i> Detalhes do Torneio</h2>
-            <button class="btn small outline" onclick="voltarParaLista()">
+            <button class="btn small gold" onclick="voltarParaLista()">
               <i class="fa-solid fa-arrow-left"></i> Voltar
             </button>
           </div>
@@ -980,6 +1083,9 @@
     </div>
   </div>
 
+  <!-- Toast Container -->
+  <div id="toast-container"></div>
+
   <script src="{% static 'js/torneio.js' %}"></script>
   <script src="{% static 'js/user-menu.js' %}"></script>
   <script>
@@ -1063,6 +1169,125 @@
         });
       }
     });
+  </script>
+  <script>
+    // Sistema de Notificações Toast
+    window.showToast = function(message, type = 'info', title = null, duration = 4000) {
+      const container = document.getElementById('toast-container');
+      if (!container) {
+        // Fallback se o container não existir
+        console.log(`[${type.toUpperCase()}] ${message}`);
+        return;
+      }
+      
+      const icons = {
+        success: 'fa-check',
+        error: 'fa-xmark',
+        warning: 'fa-exclamation',
+        info: 'fa-info'
+      };
+      
+      const titles = {
+        success: 'Sucesso',
+        error: 'Erro',
+        warning: 'Atenção',
+        info: 'Informação'
+      };
+      
+      const toast = document.createElement('div');
+      toast.className = `toast ${type}`;
+      toast.style.position = 'relative';
+      toast.innerHTML = `
+        <div class="toast-icon">
+          <i class="fa-solid ${icons[type] || icons.info}"></i>
+        </div>
+        <div class="toast-content">
+          <div class="toast-title">${title || titles[type] || titles.info}</div>
+          <div class="toast-message">${message}</div>
+        </div>
+        <button class="toast-close" onclick="this.parentElement.remove()">
+          <i class="fa-solid fa-times"></i>
+        </button>
+        <div class="toast-progress" style="animation-duration: ${duration}ms;"></div>
+      `;
+      
+      container.appendChild(toast);
+      
+      // Auto-remover após duração
+      setTimeout(() => {
+        toast.classList.add('hiding');
+        setTimeout(() => toast.remove(), 300);
+      }, duration);
+      
+      return toast;
+    };
+    
+    // Substituir alert nativo
+    window.originalAlert = window.alert;
+    window.alert = function(message) {
+      let type = 'info';
+      if (message.toLowerCase().includes('erro') || message.toLowerCase().includes('error')) type = 'error';
+      else if (message.toLowerCase().includes('sucesso') || message.toLowerCase().includes('success')) type = 'success';
+      else if (message.toLowerCase().includes('atenção') || message.toLowerCase().includes('warning')) type = 'warning';
+      showToast(message, type);
+    };
+    
+    // Função de confirmação customizada
+    window.showConfirm = function(message, onConfirm, onCancel = null) {
+      const container = document.getElementById('toast-container');
+      if (!container) {
+        // Fallback para confirm nativo
+        if (confirm(message)) {
+          onConfirm();
+        } else if (onCancel) {
+          onCancel();
+        }
+        return;
+      }
+      
+      const confirmToast = document.createElement('div');
+      confirmToast.className = 'toast warning';
+      confirmToast.style.position = 'relative';
+      
+      const confirmId = 'confirm_' + Date.now();
+      confirmToast.id = confirmId;
+      
+      const handleConfirm = () => {
+        confirmToast.classList.add('hiding');
+        setTimeout(() => confirmToast.remove(), 300);
+        onConfirm();
+      };
+      
+      const handleCancel = () => {
+        confirmToast.classList.add('hiding');
+        setTimeout(() => confirmToast.remove(), 300);
+        if (onCancel) onCancel();
+      };
+      
+      confirmToast.innerHTML = `
+        <div class="toast-icon">
+          <i class="fa-solid fa-question"></i>
+        </div>
+        <div class="toast-content">
+          <div class="toast-title">Confirmação</div>
+          <div class="toast-message">${message}</div>
+          <div style="display: flex; gap: 8px; margin-top: 12px;">
+            <button class="btn gold" style="padding: 6px 16px; font-size: 0.85rem;" id="${confirmId}_ok">
+              <i class="fa-solid fa-check"></i> Confirmar
+            </button>
+            <button class="btn outline" style="padding: 6px 16px; font-size: 0.85rem;" id="${confirmId}_cancel">
+              <i class="fa-solid fa-times"></i> Cancelar
+            </button>
+          </div>
+        </div>
+      `;
+      
+      container.appendChild(confirmToast);
+      
+      // Adicionar event listeners
+      document.getElementById(confirmId + '_ok').addEventListener('click', handleConfirm);
+      document.getElementById(confirmId + '_cancel').addEventListener('click', handleCancel);
+    };
   </script>
 </body>
 </html>
