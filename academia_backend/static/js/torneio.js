@@ -681,7 +681,7 @@
           <textarea id="torneio-premio" rows="2" placeholder="Descrição do prêmio..."></textarea>
         </div>
         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-          <button type="submit" class="btn primary">
+          <button type="submit" class="btn gold">
             <i class="fa-solid fa-save"></i> Criar Torneio
           </button>
           <button type="button" class="btn outline" onclick="navegarPara('lista')">
