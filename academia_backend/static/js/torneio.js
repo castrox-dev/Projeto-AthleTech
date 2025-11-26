@@ -39,7 +39,10 @@
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Erro desconhecido' }));
-      throw new Error(error.detail || error.message || 'Erro na requisição');
+      const errorObj = new Error(error.detail || error.message || error.error || 'Erro na requisição');
+      errorObj.error = error.error || error.detail || error.message;
+      errorObj.response = error;
+      throw errorObj;
     }
 
     return response.json();
@@ -177,7 +180,7 @@
             <button class="btn gold" onclick="editarTorneio(${torneio.id})">
               <i class="fa-solid fa-edit"></i> Editar
             </button>
-            <button class="btn gold" onclick="gerarChaves(${torneio.id})" ${torneio.status === 'inscricoes_abertas' ? 'disabled' : ''}>
+            <button class="btn gold" onclick="gerarChaves(${torneio.id})" ${torneio.total_participantes < 2 ? 'disabled title="É necessário pelo menos 2 participantes"' : ''}>
               <i class="fa-solid fa-sitemap"></i> Gerar Chaves
             </button>
           </div>
@@ -417,37 +420,103 @@
   };
 
   window.gerarChaves = async (torneioId) => {
+    // Verificar se há participantes suficientes antes de gerar chaves
+    try {
+      const torneio = await apiRequest(`/torneios/${torneioId}/`);
+      const totalParticipantes = torneio.total_participantes || 0;
+      
+      if (totalParticipantes < 2) {
+        showToast('É necessário pelo menos 2 participantes para gerar as chaves!', 'warning');
+        return;
+      }
+    } catch (error) {
+      showToast('Erro ao verificar participantes: ' + error.message, 'error');
+      return;
+    }
+    
     if (window.showConfirm) {
       window.showConfirm(
-        'Tem certeza que deseja gerar as chaves? Isso irá reorganizar todas as fases do torneio.',
+        `Tem certeza que deseja gerar as chaves? Isso irá reorganizar todas as fases do torneio. Esta ação não pode ser desfeita.`,
         async () => {
           try {
-            await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
+            const response = await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
               method: 'POST'
             });
-            showToast('Chaves geradas com sucesso!', 'success');
-            // Recarregar detalhes do torneio atual
-            await verDetalhesTorneio(torneioId);
+            
+            // Verificar se a resposta contém erro
+            if (response.error) {
+              showToast(response.error, 'error');
+              return;
+            }
+            
+            const mensagem = response.message || 'Chaves geradas com sucesso!';
+            showToast(mensagem, 'success');
+            
+            // Recarregar detalhes do torneio atual após um pequeno delay
+            setTimeout(async () => {
+              try {
+                await verDetalhesTorneio(torneioId);
+              } catch (err) {
+                console.error('Erro ao recarregar detalhes:', err);
+              }
+            }, 500);
           } catch (error) {
-            showToast('Erro ao gerar chaves: ' + error.message, 'error');
+            // Tentar extrair mensagem de erro do response
+            let errorMessage = 'Erro desconhecido ao gerar chaves';
+            if (error.error) {
+              errorMessage = error.error;
+            } else if (error.message) {
+              errorMessage = error.message;
+            } else if (typeof error === 'string') {
+              errorMessage = error;
+            }
+            showToast(errorMessage, 'error');
+            console.error('Erro ao gerar chaves:', error);
           }
         }
       );
       return;
     }
+    
     // Fallback para confirm nativo se showConfirm não existir
     if (!confirm('Tem certeza que deseja gerar as chaves? Isso irá reorganizar todas as fases do torneio.')) {
       return;
     }
+    
     try {
-      await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
+      const response = await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
         method: 'POST'
       });
-      showToast('Chaves geradas com sucesso!', 'success');
+      
+      // Verificar se a resposta contém erro
+      if (response.error) {
+        showToast(response.error, 'error');
+        return;
+      }
+      
+      const mensagem = response.message || 'Chaves geradas com sucesso!';
+      showToast(mensagem, 'success');
+      
       // Recarregar detalhes do torneio atual
-      await verDetalhesTorneio(torneioId);
+      setTimeout(async () => {
+        try {
+          await verDetalhesTorneio(torneioId);
+        } catch (err) {
+          console.error('Erro ao recarregar detalhes:', err);
+        }
+      }, 500);
     } catch (error) {
-      showToast('Erro ao gerar chaves: ' + error.message, 'error');
+      // Tentar extrair mensagem de erro do response
+      let errorMessage = 'Erro desconhecido ao gerar chaves';
+      if (error.error) {
+        errorMessage = error.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      showToast(errorMessage, 'error');
+      console.error('Erro ao gerar chaves:', error);
     }
   };
 
