@@ -1093,20 +1093,35 @@ class PixInitiateView(APIView):
             status=Pedido.STATUS_PENDENTE,
         )
 
-        # Criar checkout preference no Mercado Pago
+        # Criar pagamento PIX
         try:
             from .services.mercadopago import MercadoPagoService
             mp_service = MercadoPagoService()
-            checkout_data = mp_service.criar_checkout_preference(pedido, request.user, plano, 'pix')
+            pix_data = mp_service.criar_pagamento_pix(pedido, request.user, plano)
             
-            if checkout_data and checkout_data.get('init_point'):
+            if not pix_data:
+                return Response({'detail': 'Erro ao criar pagamento PIX'}, status=500)
+            
+            # Verificar se tem QR Code direto (credenciais de teste)
+            if pix_data.get('qr_code'):
                 return Response({
                     **PedidoSerializer(pedido).data,
-                    'init_point': checkout_data.get('init_point'),
-                    'preference_id': checkout_data.get('preference_id'),
+                    'pix_qr_code': pix_data.get('qr_code'),
+                    'pix_qr_code_base64': pix_data.get('qr_code_base64'),
+                    'pix_ticket_url': pix_data.get('ticket_url'),
+                    'pix_expiration': pix_data.get('expiration_date'),
+                    'payment_id': pix_data.get('payment_id'),
                 }, status=201)
-            else:
-                return Response({'detail': 'Erro ao criar checkout no Mercado Pago'}, status=500)
+            
+            # Checkout Pro (credenciais de produção) - redireciona para MP
+            if pix_data.get('init_point'):
+                return Response({
+                    **PedidoSerializer(pedido).data,
+                    'init_point': pix_data.get('init_point'),
+                    'preference_id': pix_data.get('preference_id'),
+                }, status=201)
+            
+            return Response({'detail': 'Erro ao criar pagamento PIX'}, status=500)
         except (ValueError, ImportError) as e:
             return Response({'detail': f'Erro ao processar pagamento: {str(e)}'}, status=500)
 

@@ -117,18 +117,18 @@ document.addEventListener('DOMContentLoaded', async function() {
     }
   });
 
-  // Botão de gerar PIX - Redireciona para Mercado Pago
+  // Botão de gerar PIX - Mostra QR Code diretamente
   document.getElementById('btn_gerar_pix').addEventListener('click', async function() {
     const btn = this;
     btn.disabled = true;
-    btn.textContent = 'Redirecionando...';
+    btn.innerHTML = '<div class="spinner"></div> Gerando PIX...';
     
     // Obter plano_id (do pending ou da URL)
     const planoIdToUse = pending?.planoId || planoId;
     if (!planoIdToUse) {
       alert('Plano não encontrado. Volte e escolha um plano.');
       btn.disabled = false;
-      btn.textContent = 'Pagar com PIX';
+      btn.innerHTML = '<i class="fa-brands fa-pix"></i> Pagar com PIX';
       return;
     }
     
@@ -141,7 +141,7 @@ document.addEventListener('DOMContentLoaded', async function() {
         return;
       }
       
-      // Criar checkout PIX no Mercado Pago
+      // Criar pagamento PIX
       const initRes = await fetch('/api/payments/pix/initiate/', {
         method: 'POST',
         headers: { 
@@ -155,26 +155,138 @@ document.addEventListener('DOMContentLoaded', async function() {
       if (!initRes.ok) { 
         alert(initData.detail || 'Falha ao iniciar pagamento PIX');
         btn.disabled = false;
-        btn.textContent = 'Pagar com PIX';
+        btn.innerHTML = '<i class="fa-brands fa-pix"></i> Pagar com PIX';
         return;
       }
       
-      // Redirecionar para o site do Mercado Pago
-      if (initData.init_point) {
+      // Verificar se temos QR Code ou se precisa redirecionar
+      if (initData.pix_qr_code) {
+        // Mostrar QR Code na página
+        mostrarQRCodePix(initData);
+      } else if (initData.init_point) {
+        // Fallback: redirecionar para Mercado Pago
         window.location.href = initData.init_point;
       } else {
-        alert('Erro: URL de pagamento não disponível');
+        alert('Erro: Dados do PIX não disponíveis');
         btn.disabled = false;
-        btn.textContent = 'Pagar com PIX';
+        btn.innerHTML = '<i class="fa-brands fa-pix"></i> Pagar com PIX';
       }
       
     } catch (e) {
       console.error(e);
       alert('Não foi possível iniciar o pagamento PIX.');
       btn.disabled = false;
-      btn.textContent = 'Pagar com PIX';
+      btn.innerHTML = '<i class="fa-brands fa-pix"></i> Pagar com PIX';
     }
   });
+
+  // Função para mostrar QR Code do PIX na página
+  function mostrarQRCodePix(data) {
+    // Esconder seções de pagamento
+    secCartao.style.display = 'none';
+    secPix.style.display = 'none';
+    
+    // Criar seção do QR Code
+    const pixSection = document.createElement('section');
+    pixSection.className = 'card';
+    pixSection.id = 'sec_pix_qrcode';
+    pixSection.innerHTML = `
+      <div class="card-header">
+        <div class="card-header-icon green">
+          <i class="fa-brands fa-pix"></i>
+        </div>
+        <h2>Pague com PIX</h2>
+      </div>
+      
+      <div style="text-align: center; padding: 20px 0;">
+        ${data.pix_qr_code_base64 ? `
+          <div style="background: white; padding: 20px; border-radius: 16px; display: inline-block; margin-bottom: 20px;">
+            <img src="data:image/png;base64,${data.pix_qr_code_base64}" alt="QR Code PIX" style="width: 220px; height: 220px;">
+          </div>
+        ` : ''}
+        
+        <p style="color: #9ca3af; margin-bottom: 16px;">
+          Escaneie o QR Code acima ou copie o código abaixo:
+        </p>
+        
+        <div style="background: rgba(0,0,0,0.3); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; padding: 16px; margin-bottom: 20px;">
+          <input type="text" id="pix_code" value="${data.pix_qr_code}" readonly 
+            style="width: 100%; background: transparent; border: none; color: #e5e7eb; font-size: 0.75rem; text-align: center; word-break: break-all;">
+        </div>
+        
+        <button onclick="copiarCodigoPix()" class="payment-btn pix-btn" style="max-width: 300px; margin: 0 auto 20px;">
+          <i class="fa-solid fa-copy"></i>
+          Copiar código PIX
+        </button>
+        
+        <div style="background: rgba(34, 197, 94, 0.1); border: 1px solid rgba(34, 197, 94, 0.2); border-radius: 10px; padding: 16px;">
+          <p style="color: #22c55e; font-size: 0.9rem; margin: 0;">
+            <i class="fa-solid fa-clock"></i> 
+            Após o pagamento, sua assinatura será ativada automaticamente em alguns minutos.
+          </p>
+        </div>
+      </div>
+      
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="/portal/" class="btn outline" style="margin-right: 10px;">
+          <i class="fa-solid fa-gauge"></i> Ir para o Portal
+        </a>
+        <button onclick="verificarPagamentoPix('${data.id_publico}')" class="btn">
+          <i class="fa-solid fa-rotate"></i> Verificar Pagamento
+        </button>
+      </div>
+    `;
+    
+    // Inserir após o resumo do pedido
+    const resumoCard = document.querySelector('.card');
+    resumoCard.insertAdjacentElement('afterend', pixSection);
+    
+    // Atualizar método no resumo
+    ckMetodo.textContent = 'PIX - Aguardando pagamento';
+  }
+
+  // Função para copiar código PIX
+  window.copiarCodigoPix = function() {
+    const pixCode = document.getElementById('pix_code');
+    if (pixCode) {
+      pixCode.select();
+      document.execCommand('copy');
+      
+      // Feedback visual
+      const btn = event.target.closest('button');
+      const originalHTML = btn.innerHTML;
+      btn.innerHTML = '<i class="fa-solid fa-check"></i> Copiado!';
+      btn.style.background = 'linear-gradient(135deg, #16a34a 0%, #15803d 100%)';
+      
+      setTimeout(() => {
+        btn.innerHTML = originalHTML;
+        btn.style.background = '';
+      }, 2000);
+    }
+  };
+
+  // Função para verificar status do pagamento
+  window.verificarPagamentoPix = async function(pedidoId) {
+    try {
+      const token = localStorage.getItem('access_token');
+      const res = await fetch(`/api/payments/pix/status/${pedidoId}/`, {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await res.json();
+      
+      if (data.status === 'aprovado' || data.status === 'approved') {
+        alert('✅ Pagamento aprovado! Redirecionando para o portal...');
+        window.location.href = '/portal/';
+      } else if (data.status === 'pendente' || data.status === 'pending') {
+        alert('⏳ Pagamento ainda pendente. Por favor, aguarde alguns instantes após realizar o pagamento.');
+      } else {
+        alert(`Status: ${data.status || 'Verificando...'}`);
+      }
+    } catch (e) {
+      console.error(e);
+      alert('Erro ao verificar pagamento. Tente novamente.');
+    }
+  };
 
   async function finalizeSignup() {
     if (!pending) { window.location.href = '/portal/'; return; }

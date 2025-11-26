@@ -171,20 +171,22 @@ class MercadoPagoService:
                     "installments": 12
                 }
             elif metodo_pagamento == 'pix':
-                # Para PIX, não configurar payment_methods ou configurar minimamente
-                # O Mercado Pago automaticamente mostra PIX quando account_money está disponível
-                # Excluir apenas cartões e boleto, mas deixar account_money (que inclui PIX e saldo)
-                # Não excluir nenhum payment_method específico para garantir que PIX apareça
+                # Para PIX, excluir outros métodos para forçar PIX
                 preference_data["payment_methods"] = {
                     "excluded_payment_types": [
                         {"id": "credit_card"},
                         {"id": "debit_card"},
-                        {"id": "ticket"}
+                        {"id": "ticket"},
+                        {"id": "atm"},
+                        {"id": "prepaid_card"}
                     ],
-                    # Não excluir payment_methods - isso permite PIX aparecer
-                    # O account_money inclui tanto PIX quanto saldo do Mercado Pago
                     "excluded_payment_methods": [],
                     "installments": 1
+                }
+                # Adicionar dados do pagador para facilitar o checkout
+                preference_data["payer"] = {
+                    "email": usuario.email,
+                    "name": f"{usuario.first_name or ''} {usuario.last_name or ''}".strip() or "Cliente",
                 }
             elif metodo_pagamento == 'cartao':
                 # Para cartão, permitir credit_card, debit_card e account_money (saldo)
@@ -265,9 +267,22 @@ class MercadoPagoService:
     
     def criar_pagamento_pix(self, pedido, usuario, plano):
         """
-        DEPRECATED: Use criar_checkout_preference ao invés disso
-        Mantido para compatibilidade
+        Cria um pagamento PIX via Mercado Pago
+        Usa Checkout Pro para redirecionar para a página do Mercado Pago
+        (usuário não precisa de conta MP para pagar PIX)
+        
+        Args:
+            pedido: Instância do modelo Pedido
+            usuario: Instância do modelo Usuario
+            plano: Instância do modelo Plano
+            
+        Returns:
+            dict: Dados com init_point para redirecionamento
         """
+        # Usar Checkout Pro para PIX
+        # O usuário será redirecionado para a página do MP onde pode pagar PIX
+        # sem precisar de conta no Mercado Pago (apenas digitar email)
+        logger.info(f"Criando Checkout Pro PIX para pedido {pedido.id_publico}")
         return self.criar_checkout_preference(pedido, usuario, plano, 'pix')
     
     def criar_pagamento_cartao(self, pedido, usuario, plano, token, installments=1, payment_method_id="visa"):
