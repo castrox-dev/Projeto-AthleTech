@@ -136,6 +136,19 @@ body {
   font-size: 1em;
   color: #ffffff;
   font-weight: 600;
+  transition: all 0.3s ease;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn:disabled {
+  opacity: 0.8;
+  cursor: not-allowed;
+}
+
+.btn.loading {
+  background: #17a2b8;
+  pointer-events: none;
 }
 .signup-link {
   margin: 20px 0 10px;
