@@ -46,15 +46,38 @@ class UsuarioSerializer(serializers.ModelSerializer):
 class UsuarioProfileSerializer(serializers.ModelSerializer):
     """Serializer para perfil do usuário (sem senha)"""
     
+    plano_nome = serializers.SerializerMethodField()
+    plano_id = serializers.SerializerMethodField()
+    matricula_status = serializers.SerializerMethodField()
+    matricula_data_fim = serializers.SerializerMethodField()
+    cpf = serializers.CharField(required=False, allow_blank=True, allow_null=True)
+    
     class Meta:
         model = Usuario
         fields = [
             'id', 'username', 'email', 'first_name', 'last_name',
             'phone', 'birth_date', 'gender', 'role', 'is_active_member',
             'is_superuser', 'created_at', 'updated_at',
-            'especialidade', 'cref'
+            'especialidade', 'cref', 'cpf',
+            'plano_nome', 'plano_id', 'matricula_status', 'matricula_data_fim'
         ]
         read_only_fields = ['id', 'username', 'created_at', 'updated_at', 'is_superuser']
+    
+    def get_plano_nome(self, obj):
+        matricula = obj.matriculas.filter(status='ativa').order_by('-data_inicio').first()
+        return matricula.plano.nome if matricula else None
+    
+    def get_plano_id(self, obj):
+        matricula = obj.matriculas.filter(status='ativa').order_by('-data_inicio').first()
+        return matricula.plano.id if matricula else None
+    
+    def get_matricula_status(self, obj):
+        matricula = obj.matriculas.filter(status='ativa').order_by('-data_inicio').first()
+        return matricula.status if matricula else None
+    
+    def get_matricula_data_fim(self, obj):
+        matricula = obj.matriculas.filter(status='ativa').order_by('-data_inicio').first()
+        return matricula.data_fim if matricula else None
 
 class LoginSerializer(serializers.Serializer):
     """Serializer para login de usuários via API"""

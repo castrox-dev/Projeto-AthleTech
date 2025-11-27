@@ -19,6 +19,7 @@ class Usuario(AbstractUser):
 
     
     phone = models.CharField('Telefone', max_length=20, blank=True, null=True)
+    cpf = models.CharField('CPF', max_length=14, blank=True, null=True, help_text='Formato: 000.000.000-00')
     birth_date = models.DateField('Data de Nascimento', blank=True, null=True)
     gender = models.CharField('Gênero', max_length=6, choices=GENDER_CHOICES, blank=True, null=True)
     role = models.CharField('Função', max_length=20, choices=Role.choices, default=Role.ALUNO)

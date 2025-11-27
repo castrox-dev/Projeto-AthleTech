@@ -11,7 +11,10 @@
   const modalClose = document.getElementById('admin-modal-close');
   const toastContainer = document.getElementById('admin-toast-container');
   const tabelaProfessoresBody = document.querySelector('#tabela-professores tbody');
+  const tabelaUsuariosBody = document.querySelector('#tabela-usuarios tbody');
   let professoresCache = [];
+  let usuariosCache = [];
+  let planosCache = [];
 
   // Verificar autenticação e role do usuário
   const checkAuthAndRole = async () => {
@@ -453,6 +456,526 @@
     }
   };
 
+  // ========== GERENCIAMENTO DE USUÁRIOS ==========
+  
+  const loadPlanos = async () => {
+    try {
+      const data = await apiRequest(`${planosEndpoint}?page_size=50`);
+      planosCache = Array.isArray(data) ? data : (data.results || []);
+    } catch (error) {
+      console.error('Erro ao carregar planos:', error);
+    }
+  };
+  
+  const renderUsuariosTabela = (usuarios) => {
+    if (!tabelaUsuariosBody) return;
+    usuariosCache = usuarios;
+    tabelaUsuariosBody.innerHTML = '';
+    
+    if (!usuarios.length) {
+      tabelaUsuariosBody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;">Nenhum usuário encontrado.</td></tr>';
+      return;
+    }
+    
+    usuarios.forEach((user) => {
+      const row = document.createElement('tr');
+      const iniciais = `${(user.first_name || user.username || 'U').charAt(0)}${(user.last_name || '').charAt(0)}`.toUpperCase();
+      const nomeCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username || 'Sem nome';
+      
+      // Determinar classe do plano
+      let planoBadgeClass = 'sem-plano';
+      let planoNome = 'Sem plano';
+      if (user.plano_nome || user.plano) {
+        planoNome = user.plano_nome || user.plano;
+        const planoLower = planoNome.toLowerCase();
+        if (planoLower.includes('premium')) planoBadgeClass = 'premium';
+        else if (planoLower.includes('elite')) planoBadgeClass = 'elite';
+        else if (planoLower.includes('básico') || planoLower.includes('basico')) planoBadgeClass = 'basico';
+        else planoBadgeClass = 'basico';
+      }
+      
+      // Status
+      const isActive = user.is_active_member;
+      const statusClass = isActive ? 'success' : 'danger';
+      const statusText = isActive ? 'Ativo' : 'Inativo';
+      
+      // Última atividade
+      const ultimaAtividade = user.last_login 
+        ? new Date(user.last_login).toLocaleDateString('pt-BR') 
+        : 'Nunca acessou';
+      
+      // Role badge
+      let roleBadge = '';
+      if (user.role === 'admin' || user.is_superuser) {
+        roleBadge = '<span class="status" style="background: rgba(239, 68, 68, 0.15); color: #f87171; margin-left: 6px;"><i class="fa-solid fa-shield"></i></span>';
+      } else if (user.role === 'professor') {
+        roleBadge = '<span class="status" style="background: rgba(59, 130, 246, 0.15); color: #60a5fa; margin-left: 6px;"><i class="fa-solid fa-chalkboard-teacher"></i></span>';
+      }
+      
+      row.innerHTML = `
+        <td>
+          <div class="usuario-info">
+            <div class="usuario-avatar">${iniciais}</div>
+            <div class="usuario-dados">
+              <strong>${nomeCompleto}${roleBadge}</strong>
+              <small>ID: ${user.id} • CPF: ${user.cpf || 'Não informado'}</small>
+            </div>
+          </div>
+        </td>
+        <td>${user.email || '--'}</td>
+        <td><span class="plano-badge ${planoBadgeClass}"><i class="fa-solid fa-crown"></i> ${planoNome}</span></td>
+        <td><span class="status ${statusClass}"><i class="fa-solid fa-circle"></i> ${statusText}</span></td>
+        <td>${ultimaAtividade}</td>
+        <td>
+          <div class="usuario-acoes">
+            <button class="btn-icon btn-editar-usuario" data-id="${user.id}" title="Editar usuário">
+              <i class="fa-solid fa-pen"></i>
+            </button>
+            <button class="btn-icon btn-mudar-plano" data-id="${user.id}" title="Alterar plano">
+              <i class="fa-solid fa-crown"></i>
+            </button>
+            <button class="btn-icon btn-gerar-pagamento" data-id="${user.id}" title="Gerar pagamento">
+              <i class="fa-solid fa-file-invoice-dollar"></i>
+            </button>
+            <button class="btn-icon danger btn-desativar-usuario" data-id="${user.id}" title="${isActive ? 'Desativar' : 'Ativar'} usuário">
+              <i class="fa-solid fa-${isActive ? 'ban' : 'check'}"></i>
+            </button>
+          </div>
+        </td>
+      `;
+      tabelaUsuariosBody.appendChild(row);
+    });
+  };
+  
+  const loadUsuarios = async (filtros = {}) => {
+    if (!tabelaUsuariosBody) return;
+    tabelaUsuariosBody.innerHTML = '<tr><td colspan="6" class="muted" style="text-align:center;"><i class="fa-solid fa-spinner fa-spin"></i> Carregando usuários...</td></tr>';
+    
+    try {
+      let url = `${professoresEndpoint}?page_size=50`;
+      if (filtros.role) url += `&role=${filtros.role}`;
+      if (filtros.search) url += `&search=${encodeURIComponent(filtros.search)}`;
+      
+      const data = await apiRequest(url);
+      let usuarios = Array.isArray(data) ? data : (data.results || []);
+      
+      // Filtrar por status localmente se necessário
+      if (filtros.status === 'ativo') {
+        usuarios = usuarios.filter(u => u.is_active);
+      } else if (filtros.status === 'inativo') {
+        usuarios = usuarios.filter(u => !u.is_active);
+      }
+      
+      renderUsuariosTabela(usuarios);
+    } catch (error) {
+      tabelaUsuariosBody.innerHTML = `<tr><td colspan="6" class="muted" style="text-align:center;">Erro ao carregar: ${error.message}</td></tr>`;
+    }
+  };
+  
+  const openNovoUsuarioModal = async () => {
+    await loadPlanos();
+    
+    const form = document.createElement('form');
+    form.id = 'form-novo-usuario';
+    
+    let planosOptions = '<option value="">Sem plano</option>';
+    planosCache.forEach(p => {
+      planosOptions += `<option value="${p.id}">${p.nome} - R$ ${parseFloat(p.preco).toFixed(2)}</option>`;
+    });
+    
+    form.innerHTML = `
+      <div class="form-group">
+        <label for="user-nome">Nome Completo *</label>
+        <input type="text" id="user-nome" name="nome" required placeholder="Ex.: João Silva">
+      </div>
+      <div class="form-group">
+        <label for="user-email">Email *</label>
+        <input type="email" id="user-email" name="email" required placeholder="joao@email.com">
+      </div>
+      <div class="form-group">
+        <label for="user-cpf">CPF</label>
+        <input type="text" id="user-cpf" name="cpf" placeholder="000.000.000-00">
+      </div>
+      <div class="form-group">
+        <label for="user-telefone">Telefone</label>
+        <input type="text" id="user-telefone" name="telefone" placeholder="(00) 00000-0000">
+      </div>
+      <div class="form-group">
+        <label for="user-role">Perfil *</label>
+        <select id="user-role" name="role" required>
+          <option value="aluno">Aluno</option>
+          <option value="professor">Professor</option>
+          <option value="admin">Administrador</option>
+        </select>
+      </div>
+      <div class="form-group" id="grupo-plano">
+        <label for="user-plano">Plano</label>
+        <select id="user-plano" name="plano">${planosOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="user-senha">Senha Temporária *</label>
+        <input type="text" id="user-senha" name="senha" required value="${Math.random().toString(36).slice(-8)}">
+        <small class="muted">O usuário deverá alterar no primeiro acesso</small>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn outline" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-user-plus"></i> Criar Membro</button>
+      </div>
+    `;
+    
+    // Mostrar/ocultar campo de plano baseado no role
+    const roleSelect = form.querySelector('#user-role');
+    const grupoPlano = form.querySelector('#grupo-plano');
+    roleSelect.addEventListener('change', () => {
+      grupoPlano.style.display = roleSelect.value === 'aluno' ? 'block' : 'none';
+    });
+    
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const nomeCompleto = formData.get('nome').trim();
+      const partesNome = nomeCompleto.split(' ');
+      const firstName = partesNome[0] || '';
+      const lastName = partesNome.slice(1).join(' ') || '';
+      
+      const payload = {
+        email: formData.get('email'),
+        first_name: firstName,
+        last_name: lastName,
+        cpf: formData.get('cpf') || '',
+        phone: formData.get('telefone') || '',
+        role: formData.get('role'),
+        password: formData.get('senha'),
+        password_confirm: formData.get('senha'),
+      };
+      
+      try {
+        const novoUsuario = await apiRequest(professoresEndpoint, { method: 'POST', body: payload });
+        
+        // Se for aluno e tiver plano selecionado, criar matrícula
+        const planoId = formData.get('plano');
+        if (formData.get('role') === 'aluno' && planoId) {
+          try {
+            const plano = planosCache.find(p => p.id === parseInt(planoId));
+            const dataInicio = new Date();
+            const dataFim = new Date();
+            dataFim.setDate(dataFim.getDate() + (plano?.duracao_dias || 30));
+            
+            await apiRequest('/api/matriculas/', { 
+              method: 'POST', 
+              body: { 
+                usuario: novoUsuario.id, 
+                plano: parseInt(planoId), 
+                status: 'ativa',
+                data_inicio: dataInicio.toISOString().split('T')[0],
+                data_fim: dataFim.toISOString().split('T')[0],
+                valor_pago: parseFloat(plano?.preco || 0)
+              }
+            });
+          } catch (e) {
+            console.warn('Aviso ao criar matrícula:', e.message);
+          }
+        }
+        
+        showToast('Membro criado com sucesso!', 'success', 'Sucesso');
+        closeModal();
+        loadUsuarios();
+      } catch (error) {
+        showToast(error.message || 'Erro ao criar membro', 'error', 'Erro');
+      }
+    });
+    
+    form.querySelector('[data-action="cancelar"]').addEventListener('click', closeModal);
+    openModal('Novo Membro', form);
+  };
+  
+  const openEditarUsuarioModal = (user) => {
+    const form = document.createElement('form');
+    form.id = 'form-editar-usuario';
+    
+    form.innerHTML = `
+      <div class="form-group">
+        <label for="edit-user-nome">Nome</label>
+        <input type="text" id="edit-user-nome" name="first_name" value="${user.first_name || ''}">
+      </div>
+      <div class="form-group">
+        <label for="edit-user-sobrenome">Sobrenome</label>
+        <input type="text" id="edit-user-sobrenome" name="last_name" value="${user.last_name || ''}">
+      </div>
+      <div class="form-group">
+        <label for="edit-user-email">Email</label>
+        <input type="email" id="edit-user-email" name="email" value="${user.email || ''}" required>
+      </div>
+      <div class="form-group">
+        <label for="edit-user-cpf">CPF</label>
+        <input type="text" id="edit-user-cpf" name="cpf" value="${user.cpf || ''}">
+      </div>
+      <div class="form-group">
+        <label for="edit-user-telefone">Telefone</label>
+        <input type="text" id="edit-user-telefone" name="phone" value="${user.phone || ''}">
+      </div>
+      <div class="form-group">
+        <label for="edit-user-role">Perfil</label>
+        <select id="edit-user-role" name="role">
+          <option value="aluno" ${user.role === 'aluno' ? 'selected' : ''}>Aluno</option>
+          <option value="professor" ${user.role === 'professor' ? 'selected' : ''}>Professor</option>
+          <option value="admin" ${user.role === 'admin' ? 'selected' : ''}>Administrador</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn outline" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-save"></i> Salvar</button>
+      </div>
+    `;
+    
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const payload = {
+        first_name: formData.get('first_name'),
+        last_name: formData.get('last_name'),
+        email: formData.get('email'),
+        cpf: formData.get('cpf'),
+        phone: formData.get('phone'),
+        role: formData.get('role'),
+      };
+      
+      try {
+        await apiRequest(`${professoresEndpoint}${user.id}/`, { method: 'PATCH', body: payload });
+        showToast('Usuário atualizado!', 'success', 'Sucesso');
+        closeModal();
+        loadUsuarios();
+      } catch (error) {
+        showToast(error.message || 'Erro ao atualizar', 'error', 'Erro');
+      }
+    });
+    
+    form.querySelector('[data-action="cancelar"]').addEventListener('click', closeModal);
+    openModal(`Editar: ${user.first_name || user.username}`, form);
+  };
+  
+  const openMudarPlanoModal = async (user) => {
+    await loadPlanos();
+    
+    const form = document.createElement('form');
+    form.id = 'form-mudar-plano';
+    
+    let planosOptions = '<option value="">Sem plano</option>';
+    planosCache.forEach(p => {
+      planosOptions += `<option value="${p.id}">${p.nome} - R$ ${parseFloat(p.preco).toFixed(2)}</option>`;
+    });
+    
+    const nomeCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+    
+    form.innerHTML = `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div class="usuario-avatar" style="width: 60px; height: 60px; margin: 0 auto 12px; font-size: 1.2rem;">
+          ${(user.first_name || 'U').charAt(0)}${(user.last_name || '').charAt(0)}
+        </div>
+        <h3 style="color: #fff; margin-bottom: 4px;">${nomeCompleto}</h3>
+        <p class="muted">${user.email}</p>
+        <p style="margin-top: 8px;">Plano atual: <strong style="color: #a78bfa;">${user.plano_nome || 'Nenhum'}</strong></p>
+      </div>
+      <div class="form-group">
+        <label for="novo-plano">Novo Plano</label>
+        <select id="novo-plano" name="plano" required>${planosOptions}</select>
+      </div>
+      <div class="form-group">
+        <label for="data-inicio">Data de Início</label>
+        <input type="date" id="data-inicio" name="data_inicio" value="${new Date().toISOString().split('T')[0]}">
+      </div>
+      <div class="form-group">
+        <label class="checkbox-label">
+          <input type="checkbox" name="gerar_pagamento" id="gerar-pagamento-check" checked>
+          <span class="checkbox-custom"><i class="fa-solid fa-check"></i></span>
+          Gerar cobrança automaticamente
+        </label>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn outline" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-crown"></i> Alterar Plano</button>
+      </div>
+    `;
+    
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      const planoId = formData.get('plano');
+      
+      if (!planoId) {
+        showToast('Selecione um plano', 'warning', 'Atenção');
+        return;
+      }
+      
+      try {
+        const plano = planosCache.find(p => p.id === parseInt(planoId));
+        const dataInicio = new Date(formData.get('data_inicio'));
+        const dataFim = new Date(dataInicio);
+        dataFim.setDate(dataFim.getDate() + (plano?.duracao_dias || 30));
+        
+        // Buscar matrículas ativas do usuário para cancelar
+        try {
+          const matriculasData = await apiRequest(`/api/matriculas/?usuario=${user.id}`);
+          const matriculas = Array.isArray(matriculasData) ? matriculasData : (matriculasData.results || []);
+          
+          // Cancelar matrículas ativas anteriores
+          for (const mat of matriculas) {
+            if (mat.status === 'ativa') {
+              await apiRequest(`/api/matriculas/${mat.id}/`, { 
+                method: 'PATCH', 
+                body: { status: 'cancelada' }
+              });
+            }
+          }
+        } catch (e) {
+          console.warn('Aviso ao verificar matrículas anteriores:', e.message);
+        }
+        
+        // Criar nova matrícula
+        await apiRequest('/api/matriculas/', { 
+          method: 'POST', 
+          body: { 
+            usuario: user.id, 
+            plano: parseInt(planoId),
+            data_inicio: formData.get('data_inicio'),
+            data_fim: dataFim.toISOString().split('T')[0],
+            valor_pago: parseFloat(plano?.preco || 0),
+            status: 'ativa'
+          }
+        });
+        
+        // Ativar usuário como membro
+        try {
+          await apiRequest(`${professoresEndpoint}${user.id}/`, { 
+            method: 'PATCH', 
+            body: { is_active_member: true }
+          });
+        } catch (e) {
+          console.warn('Aviso ao ativar usuário:', e.message);
+        }
+        
+        // Gerar pagamento se checkbox marcado
+        if (formData.get('gerar_pagamento')) {
+          if (plano) {
+            try {
+              await apiRequest('/api/pagamentos/', { 
+                method: 'POST', 
+                body: { 
+                  usuario: user.id, 
+                  valor: parseFloat(plano.preco),
+                  descricao: `Mensalidade - ${plano.nome}`,
+                  status: 'pendente'
+                }
+              });
+            } catch (e) {
+              console.warn('Aviso ao criar pagamento:', e.message);
+            }
+          }
+        }
+        
+        showToast('Plano alterado com sucesso!', 'success', 'Sucesso');
+        closeModal();
+        loadUsuarios();
+      } catch (error) {
+        showToast(error.message || 'Erro ao alterar plano', 'error', 'Erro');
+      }
+    });
+    
+    form.querySelector('[data-action="cancelar"]').addEventListener('click', closeModal);
+    openModal('Alterar Plano', form);
+  };
+  
+  const openGerarPagamentoModal = async (user) => {
+    await loadPlanos();
+    
+    const nomeCompleto = `${user.first_name || ''} ${user.last_name || ''}`.trim() || user.username;
+    const plano = planosCache.find(p => p.nome === user.plano_nome);
+    const valorSugerido = plano ? parseFloat(plano.preco).toFixed(2) : '0.00';
+    
+    const form = document.createElement('form');
+    form.id = 'form-gerar-pagamento';
+    
+    form.innerHTML = `
+      <div style="text-align: center; margin-bottom: 20px;">
+        <div class="usuario-avatar" style="width: 60px; height: 60px; margin: 0 auto 12px; font-size: 1.2rem;">
+          ${(user.first_name || 'U').charAt(0)}${(user.last_name || '').charAt(0)}
+        </div>
+        <h3 style="color: #fff; margin-bottom: 4px;">${nomeCompleto}</h3>
+        <p class="muted">${user.email}</p>
+      </div>
+      <div class="form-group">
+        <label for="pag-descricao">Descrição</label>
+        <input type="text" id="pag-descricao" name="descricao" value="Mensalidade - ${user.plano_nome || 'Academia'}" required>
+      </div>
+      <div class="form-group">
+        <label for="pag-valor">Valor (R$)</label>
+        <input type="number" id="pag-valor" name="valor" step="0.01" min="0" value="${valorSugerido}" required>
+      </div>
+      <div class="form-group">
+        <label for="pag-vencimento">Data de Vencimento</label>
+        <input type="date" id="pag-vencimento" name="data_vencimento" value="${new Date(Date.now() + 7*24*60*60*1000).toISOString().split('T')[0]}">
+      </div>
+      <div class="form-group">
+        <label for="pag-metodo">Método de Pagamento</label>
+        <select id="pag-metodo" name="metodo">
+          <option value="pix">PIX</option>
+          <option value="cartao">Cartão de Crédito</option>
+          <option value="boleto">Boleto</option>
+        </select>
+      </div>
+      <div class="form-actions">
+        <button type="button" class="btn outline" data-action="cancelar">Cancelar</button>
+        <button type="submit" class="btn primary"><i class="fa-solid fa-file-invoice-dollar"></i> Gerar Cobrança</button>
+      </div>
+    `;
+    
+    form.addEventListener('submit', async (event) => {
+      event.preventDefault();
+      const formData = new FormData(form);
+      
+      try {
+        await apiRequest('/api/pagamentos/', { 
+          method: 'POST', 
+          body: { 
+            usuario: user.id, 
+            valor: parseFloat(formData.get('valor')),
+            descricao: formData.get('descricao'),
+            data_vencimento: formData.get('data_vencimento'),
+            metodo_pagamento: formData.get('metodo'),
+            status: 'pendente'
+          }
+        });
+        
+        showToast('Cobrança gerada com sucesso!', 'success', 'Sucesso');
+        closeModal();
+      } catch (error) {
+        showToast(error.message || 'Erro ao gerar cobrança', 'error', 'Erro');
+      }
+    });
+    
+    form.querySelector('[data-action="cancelar"]').addEventListener('click', closeModal);
+    openModal('Gerar Pagamento', form);
+  };
+  
+  const toggleUsuarioStatus = async (user) => {
+    const isActive = user.is_active_member;
+    const action = isActive ? 'desativar' : 'ativar';
+    if (!confirm(`Tem certeza que deseja ${action} este usuário?`)) return;
+    
+    try {
+      await apiRequest(`${professoresEndpoint}${user.id}/`, { 
+        method: 'PATCH', 
+        body: { is_active_member: !isActive }
+      });
+      showToast(`Usuário ${isActive ? 'desativado' : 'ativado'}!`, 'success', 'Sucesso');
+      loadUsuarios();
+    } catch (error) {
+      showToast(error.message || 'Erro ao alterar status', 'error', 'Erro');
+    }
+  };
+  
+  // ========== FIM GERENCIAMENTO DE USUÁRIOS ==========
+
   const openEditProfessorModal = (prof) => {
     const form = document.createElement('form');
     form.innerHTML = `
@@ -550,6 +1073,65 @@
       event.preventDefault();
       showToast('Selecione um professor na lista para remover utilizando o botão ao lado.', 'info', 'Dica');
     });
+    
+    // ===== Eventos de Usuários =====
+    document.getElementById('btn-novo-usuario')?.addEventListener('click', (event) => {
+      event.preventDefault();
+      openNovoUsuarioModal();
+    });
+    
+    // Busca de usuários
+    let buscaTimeout;
+    document.getElementById('busca-usuarios')?.addEventListener('input', (event) => {
+      clearTimeout(buscaTimeout);
+      buscaTimeout = setTimeout(() => {
+        const filtros = {
+          search: event.target.value,
+          role: document.getElementById('filtro-role')?.value || '',
+          status: document.getElementById('filtro-status')?.value || ''
+        };
+        loadUsuarios(filtros);
+      }, 400);
+    });
+    
+    // Filtro por role
+    document.getElementById('filtro-role')?.addEventListener('change', () => {
+      const filtros = {
+        search: document.getElementById('busca-usuarios')?.value || '',
+        role: document.getElementById('filtro-role')?.value || '',
+        status: document.getElementById('filtro-status')?.value || ''
+      };
+      loadUsuarios(filtros);
+    });
+    
+    // Filtro por status
+    document.getElementById('filtro-status')?.addEventListener('change', () => {
+      const filtros = {
+        search: document.getElementById('busca-usuarios')?.value || '',
+        role: document.getElementById('filtro-role')?.value || '',
+        status: document.getElementById('filtro-status')?.value || ''
+      };
+      loadUsuarios(filtros);
+    });
+    
+    // Eventos na tabela de usuários
+    tabelaUsuariosBody?.addEventListener('click', (event) => {
+      const userId = event.target.closest('[data-id]')?.dataset.id;
+      if (!userId) return;
+      
+      const user = usuariosCache.find(u => u.id === parseInt(userId));
+      if (!user) return;
+      
+      if (event.target.closest('.btn-editar-usuario')) {
+        openEditarUsuarioModal(user);
+      } else if (event.target.closest('.btn-mudar-plano')) {
+        openMudarPlanoModal(user);
+      } else if (event.target.closest('.btn-gerar-pagamento')) {
+        openGerarPagamentoModal(user);
+      } else if (event.target.closest('.btn-desativar-usuario')) {
+        toggleUsuarioStatus(user);
+      }
+    });
 
     tabelaProfessoresBody?.addEventListener('click', (event) => {
       const removeButton = event.target.closest('.btn-remover-professor');
@@ -579,6 +1161,8 @@
     });
 
     loadProfessores();
+    loadUsuarios();
+    loadPlanos();
     
     // Configurar logout para limpar tokens JWT
     setupLogout();
