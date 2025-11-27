@@ -641,23 +641,27 @@
       cursor: pointer;
       position: relative;
       flex-direction: column;
-      gap: 4px;
+      gap: 8px;
     }
     
     .quick-action.plano-action.has-plano i { color: #fbbf24; }
     
     .plano-nome-badge {
-      font-size: 0.7rem;
+      display: block;
+      font-size: 0.75rem;
       color: #9ca3af;
       background: rgba(0, 0, 0, 0.3);
-      padding: 2px 8px;
-      border-radius: 10px;
-      margin-top: 4px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      margin-top: 8px;
+      width: 100%;
+      text-align: center;
     }
     
     .quick-action.plano-action.has-plano .plano-nome-badge {
       background: rgba(251, 191, 36, 0.2);
       color: #fbbf24;
+      font-weight: 500;
     }
     
     /* Toast Notifications */
@@ -852,7 +856,7 @@
         <div class="quick-action plano-action" id="plano-quick-action" onclick="irParaPlano()">
           <i class="fa-solid fa-crown"></i>
           <span id="plano-quick-label">Meu Plano</span>
-          <small id="plano-quick-nome" class="plano-nome-badge">Carregando...</small>
+          <div id="plano-quick-nome" class="plano-nome-badge">Carregando...</div>
         </div>
       </div>
       
