@@ -39,16 +39,23 @@
 
     if (!response.ok) {
       const error = await response.json().catch(() => ({ detail: 'Erro desconhecido' }));
-      throw new Error(error.detail || error.message || 'Erro na requisição');
+      const errorObj = new Error(error.detail || error.message || error.error || 'Erro na requisição');
+      errorObj.error = error.error || error.detail || error.message;
+      errorObj.response = error;
+      throw errorObj;
     }
 
     return response.json();
   };
 
   const showToast = (message, type = 'info') => {
-    // Implementar toast se necessário
-    console.log(`[${type.toUpperCase()}] ${message}`);
-    alert(message);
+    // Usar o sistema global de toast
+    if (window.showToast) {
+      window.showToast(message, type);
+    } else {
+      // Fallback se não existir
+      console.log(`[${type.toUpperCase()}] ${message}`);
+    }
   };
 
   const closeModal = (modalId) => {
@@ -124,7 +131,7 @@
         ` : ''}
       </div>
       <div style="margin-top: 1rem; text-align: right;">
-        <button class="btn outline" onclick="event.stopPropagation(); verDetalhesTorneio(${torneio.id})">
+        <button class="btn gold" onclick="event.stopPropagation(); verDetalhesTorneio(${torneio.id})">
           Ver Detalhes <i class="fa-solid fa-arrow-right"></i>
         </button>
       </div>
@@ -170,16 +177,16 @@
         ` : ''}
         ${isAdmin() ? `
           <div style="margin-top: 1.5rem; display: flex; gap: 1rem; flex-wrap: wrap;">
-            <button class="btn primary" onclick="editarTorneio(${torneio.id})">
+            <button class="btn gold" onclick="editarTorneio(${torneio.id})">
               <i class="fa-solid fa-edit"></i> Editar
             </button>
-            <button class="btn outline" onclick="gerarChaves(${torneio.id})" ${torneio.status === 'inscricoes_abertas' ? 'disabled' : ''}>
+            <button class="btn gold" onclick="gerarChaves(${torneio.id})" ${torneio.total_participantes < 2 ? 'disabled title="É necessário pelo menos 2 participantes"' : ''}>
               <i class="fa-solid fa-sitemap"></i> Gerar Chaves
             </button>
           </div>
         ` : ''}
         ${isAluno() && !torneio.usuario_inscrito && torneio.status === 'inscricoes_abertas' && torneio.vagas_disponiveis > 0 ? `
-          <button class="btn primary btn-inscrever" onclick="inscreverTorneio(${torneio.id})">
+          <button class="btn gold btn-inscrever" onclick="inscreverTorneio(${torneio.id})">
             <i class="fa-solid fa-user-plus"></i> Inscrever-se
           </button>
         ` : ''}
@@ -243,7 +250,7 @@
           </div>
         ` : ''}
         ${(isAdmin() || isProfessor()) && p1Id && p2Id && !chave.concluida ? `
-          <button class="btn outline" style="margin-top: 0.5rem; width: 100%;" onclick="abrirModalResultado(${chave.id}, ${p1Id}, ${p2Id})">
+          <button class="btn gold" style="margin-top: 0.5rem; width: 100%;" onclick="abrirModalResultado(${chave.id}, ${p1Id}, ${p2Id})">
             <i class="fa-solid fa-trophy"></i> Registrar Resultado
           </button>
         ` : ''}
@@ -283,96 +290,37 @@
       }).slice(0, 6); // Limitar a 6 próximos
       
       if (torneiosFuturos.length === 0) {
-        calendarioContent.innerHTML = '<p style="text-align: center; color: var(--muted);">Nenhuma competição agendada no momento.</p>';
+        calendarioContent.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 2rem;">Nenhuma competição agendada no momento.</p>';
         return;
       }
       
-      // Renderizar calendário mensal
-      const mesAtual = hoje.getMonth();
-      const anoAtual = hoje.getFullYear();
-      const primeiroDia = new Date(anoAtual, mesAtual, 1);
-      const ultimoDia = new Date(anoAtual, mesAtual + 1, 0);
-      const diasNoMes = ultimoDia.getDate();
-      const diaSemanaInicio = primeiroDia.getDay();
-      
-      const diasSemana = ['Dom', 'Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb'];
-      const meses = ['Janeiro', 'Fevereiro', 'Março', 'Abril', 'Maio', 'Junho', 
-                     'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro'];
-      
-      // Mapear torneios por dia
-      const torneiosPorDia = {};
-      torneiosFuturos.forEach(torneio => {
-        if (torneio.data_inicio) {
-          const data = new Date(torneio.data_inicio);
-          const dia = data.getDate();
-          const mes = data.getMonth();
-          const ano = data.getFullYear();
-          
-          if (mes === mesAtual && ano === anoAtual) {
-            if (!torneiosPorDia[dia]) {
-              torneiosPorDia[dia] = [];
-            }
-            torneiosPorDia[dia].push(torneio);
-          }
-        }
-      });
-      
-      let calendarioHTML = `
-        <div style="margin-bottom: 1.5rem;">
-          <h3 style="margin: 0 0 1rem 0; color: var(--text);">${meses[mesAtual]} ${anoAtual}</h3>
-          <div class="calendario-mes">
-            ${diasSemana.map(dia => `<div class="calendario-dia-semana">${dia}</div>`).join('')}
-      `;
-      
-      // Espaços vazios antes do primeiro dia
-      for (let i = 0; i < diaSemanaInicio; i++) {
-        calendarioHTML += '<div class="calendario-dia" style="visibility: hidden;"></div>';
-      }
-      
-      // Dias do mês
-      for (let dia = 1; dia <= diasNoMes; dia++) {
-        const temEvento = torneiosPorDia[dia];
-        const isHoje = dia === hoje.getDate();
-        const classeDia = temEvento ? 'tem-evento' : '';
-        const estiloHoje = isHoje ? 'border: 2px solid var(--primary);' : '';
-        
-        calendarioHTML += `
-          <div class="calendario-dia ${classeDia}" style="${estiloHoje}" 
-               ${temEvento ? `onclick="verDetalhesTorneio(${torneiosPorDia[dia][0].id})" title="${torneiosPorDia[dia].map(t => t.nome).join(', ')}"` : ''}>
-            <div class="calendario-dia-numero">${dia}</div>
-            ${temEvento ? `<div class="calendario-dia-evento">${torneiosPorDia[dia].length} evento${torneiosPorDia[dia].length > 1 ? 's' : ''}</div>` : ''}
-          </div>
-        `;
-      }
-      
-      calendarioHTML += '</div></div>';
-      
-      // Lista de próximas competições
-      calendarioHTML += `
-        <div style="margin-top: 2rem;">
-          <h3 style="margin: 0 0 1rem 0; color: var(--text);">Próximas Competições</h3>
-          <div class="calendario-grid">
-            ${torneiosFuturos.map(torneio => {
-              const dataInicio = torneio.data_inicio ? new Date(torneio.data_inicio) : null;
-              const dataFormatada = dataInicio ? dataInicio.toLocaleDateString('pt-BR', { 
-                day: '2-digit', 
-                month: 'short', 
-                year: 'numeric' 
-              }) : 'Data não definida';
-              
-              return `
-                <div class="calendario-item" onclick="verDetalhesTorneio(${torneio.id})">
-                  <div class="calendario-data">
-                    <i class="fa-solid fa-calendar"></i> ${dataFormatada}
-                  </div>
-                  <div class="calendario-nome">${torneio.nome || 'Sem nome'}</div>
-                  <span class="calendario-status status-${torneio.status || 'inscricoes_abertas'}">
+      // Lista de próximas competições em formato de cards
+      const calendarioHTML = `
+        <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(280px, 1fr)); gap: 1rem;">
+          ${torneiosFuturos.map(torneio => {
+            const dataInicio = torneio.data_inicio ? new Date(torneio.data_inicio) : null;
+            const dataFormatada = dataInicio ? dataInicio.toLocaleDateString('pt-BR', { 
+              day: '2-digit', 
+              month: 'short', 
+              year: 'numeric' 
+            }) : 'Data não definida';
+            
+            return `
+              <div class="torneio-card" onclick="verDetalhesTorneio(${torneio.id})" style="cursor: pointer;">
+                <div class="torneio-card-header">
+                  <h3><i class="fa-solid fa-trophy"></i> ${torneio.nome || 'Sem nome'}</h3>
+                  <span class="badge ${torneio.status === 'inscricoes_abertas' ? 'success' : torneio.status === 'em_andamento' ? 'warning' : 'info'}">
                     ${statusText[torneio.status] || 'Inscrições Abertas'}
                   </span>
                 </div>
-              `;
-            }).join('')}
-          </div>
+                <div class="torneio-card-meta">
+                  <span><i class="fa-solid fa-calendar"></i> ${dataFormatada}</span>
+                  ${torneio.total_participantes ? `<span><i class="fa-solid fa-users"></i> ${torneio.total_participantes}/${torneio.max_participantes} participantes</span>` : ''}
+                </div>
+                ${torneio.descricao ? `<p style="color: #9ca3af; margin-top: 0.5rem; font-size: 0.9rem;">${torneio.descricao.substring(0, 100)}${torneio.descricao.length > 100 ? '...' : ''}</p>` : ''}
+              </div>
+            `;
+          }).join('')}
         </div>
       `;
       
@@ -380,7 +328,7 @@
     } catch (error) {
       console.error('Erro ao carregar calendário:', error);
       const calendarioContent = document.getElementById('calendario-content');
-      calendarioContent.innerHTML = '<p style="text-align: center; color: var(--muted);">Erro ao carregar calendário.</p>';
+      calendarioContent.innerHTML = '<p style="text-align: center; color: #9ca3af; padding: 2rem;">Erro ao carregar competições.</p>';
     }
   };
 
@@ -472,18 +420,103 @@
   };
 
   window.gerarChaves = async (torneioId) => {
+    // Verificar se há participantes suficientes antes de gerar chaves
+    try {
+      const torneio = await apiRequest(`/torneios/${torneioId}/`);
+      const totalParticipantes = torneio.total_participantes || 0;
+      
+      if (totalParticipantes < 2) {
+        showToast('É necessário pelo menos 2 participantes para gerar as chaves!', 'warning');
+        return;
+      }
+    } catch (error) {
+      showToast('Erro ao verificar participantes: ' + error.message, 'error');
+      return;
+    }
+    
+    if (window.showConfirm) {
+      window.showConfirm(
+        `Tem certeza que deseja gerar as chaves? Isso irá reorganizar todas as fases do torneio. Esta ação não pode ser desfeita.`,
+        async () => {
+          try {
+            const response = await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
+              method: 'POST'
+            });
+            
+            // Verificar se a resposta contém erro
+            if (response.error) {
+              showToast(response.error, 'error');
+              return;
+            }
+            
+            const mensagem = response.message || 'Chaves geradas com sucesso!';
+            showToast(mensagem, 'success');
+            
+            // Recarregar detalhes do torneio atual após um pequeno delay
+            setTimeout(async () => {
+              try {
+                await verDetalhesTorneio(torneioId);
+              } catch (err) {
+                console.error('Erro ao recarregar detalhes:', err);
+              }
+            }, 500);
+          } catch (error) {
+            // Tentar extrair mensagem de erro do response
+            let errorMessage = 'Erro desconhecido ao gerar chaves';
+            if (error.error) {
+              errorMessage = error.error;
+            } else if (error.message) {
+              errorMessage = error.message;
+            } else if (typeof error === 'string') {
+              errorMessage = error;
+            }
+            showToast(errorMessage, 'error');
+            console.error('Erro ao gerar chaves:', error);
+          }
+        }
+      );
+      return;
+    }
+    
+    // Fallback para confirm nativo se showConfirm não existir
     if (!confirm('Tem certeza que deseja gerar as chaves? Isso irá reorganizar todas as fases do torneio.')) {
       return;
     }
+    
     try {
-      await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
+      const response = await apiRequest(`/torneios/${torneioId}/gerar_chaves/`, {
         method: 'POST'
       });
-      showToast('Chaves geradas com sucesso!', 'success');
+      
+      // Verificar se a resposta contém erro
+      if (response.error) {
+        showToast(response.error, 'error');
+        return;
+      }
+      
+      const mensagem = response.message || 'Chaves geradas com sucesso!';
+      showToast(mensagem, 'success');
+      
       // Recarregar detalhes do torneio atual
-      await verDetalhesTorneio(torneioId);
+      setTimeout(async () => {
+        try {
+          await verDetalhesTorneio(torneioId);
+        } catch (err) {
+          console.error('Erro ao recarregar detalhes:', err);
+        }
+      }, 500);
     } catch (error) {
-      showToast('Erro ao gerar chaves: ' + error.message, 'error');
+      // Tentar extrair mensagem de erro do response
+      let errorMessage = 'Erro desconhecido ao gerar chaves';
+      if (error.error) {
+        errorMessage = error.error;
+      } else if (error.message) {
+        errorMessage = error.message;
+      } else if (typeof error === 'string') {
+        errorMessage = error;
+      }
+      showToast(errorMessage, 'error');
+      console.error('Erro ao gerar chaves:', error);
     }
   };
 
@@ -542,9 +575,9 @@
     }
   };
 
-  window.editarTorneio = (torneioId) => {
-    // Implementar edição de torneio
-    showToast('Funcionalidade de edição em desenvolvimento', 'info');
+  window.editarTorneio = async (torneioId) => {
+    navegarPara('criar');
+    await carregarFormCriarTorneio(torneioId);
   };
 
   // Navegação entre telas
@@ -626,63 +659,105 @@
     }
   };
 
-  // Carregar formulário de criar torneio
-  const carregarFormCriarTorneio = () => {
+  // Carregar formulário de criar/editar torneio
+  const carregarFormCriarTorneio = async (torneioId = null) => {
     const formContainer = document.getElementById('form-criar-torneio');
+    const cardHead = document.querySelector('#tela-criar .card-head h2');
+    const cardDescription = document.querySelector('#tela-criar .card-head + p');
+    const isEdit = torneioId !== null;
+    let torneioData = null;
+    
+    // Se for edição, carregar dados do torneio
+    if (isEdit) {
+      try {
+        torneioData = await apiRequest(`/torneios/${torneioId}/`);
+        // Atualizar título do card
+        if (cardHead) {
+          cardHead.innerHTML = `<i class="fa-solid fa-edit"></i> Editar Torneio`;
+        }
+        if (cardDescription) {
+          cardDescription.textContent = 'Edite os dados do torneio abaixo';
+        }
+      } catch (error) {
+        showToast('Erro ao carregar dados do torneio: ' + error.message, 'error');
+        return;
+      }
+    } else {
+      // Restaurar título original
+      if (cardHead) {
+        cardHead.innerHTML = `<i class="fa-solid fa-plus-circle"></i> Criar Novo Torneio`;
+      }
+      if (cardDescription) {
+        cardDescription.textContent = 'Preencha os dados para criar uma nova competição';
+      }
+    }
+    
+    // Função auxiliar para formatar data para datetime-local
+    const formatDateTimeLocal = (dateString) => {
+      if (!dateString) return '';
+      const date = new Date(dateString);
+      const year = date.getFullYear();
+      const month = String(date.getMonth() + 1).padStart(2, '0');
+      const day = String(date.getDate()).padStart(2, '0');
+      const hours = String(date.getHours()).padStart(2, '0');
+      const minutes = String(date.getMinutes()).padStart(2, '0');
+      return `${year}-${month}-${day}T${hours}:${minutes}`;
+    };
+    
     formContainer.innerHTML = `
-      <form id="form-novo-torneio" class="resultado-form">
-        <div>
+      <form id="form-novo-torneio">
+        <div class="field">
           <label>Nome do Torneio *</label>
-          <input type="text" id="torneio-nome" required placeholder="Ex: Campeonato de Força 2024">
+          <input type="text" id="torneio-nome" required placeholder="Ex: Campeonato de Força 2024" value="${torneioData ? (torneioData.nome || '') : ''}">
         </div>
-        <div>
+        <div class="field">
           <label>Descrição *</label>
-          <textarea id="torneio-descricao" rows="3" required placeholder="Descreva o torneio..."></textarea>
+          <textarea id="torneio-descricao" rows="3" required placeholder="Descreva o torneio...">${torneioData ? (torneioData.descricao || '') : ''}</textarea>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div>
+        <div class="grid-2">
+          <div class="field">
             <label>Data de Início das Inscrições *</label>
-            <input type="datetime-local" id="torneio-inicio-inscricoes" required>
+            <input type="datetime-local" id="torneio-inicio-inscricoes" required value="${torneioData ? formatDateTimeLocal(torneioData.data_inicio_inscricoes) : ''}">
           </div>
-          <div>
+          <div class="field">
             <label>Data de Fim das Inscrições *</label>
-            <input type="datetime-local" id="torneio-fim-inscricoes" required>
+            <input type="datetime-local" id="torneio-fim-inscricoes" required value="${torneioData ? formatDateTimeLocal(torneioData.data_fim_inscricoes) : ''}">
           </div>
         </div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem;">
-          <div>
+        <div class="grid-2">
+          <div class="field">
             <label>Data de Início do Torneio *</label>
-            <input type="datetime-local" id="torneio-inicio" required>
+            <input type="datetime-local" id="torneio-inicio" required value="${torneioData ? formatDateTimeLocal(torneioData.data_inicio) : ''}">
           </div>
-          <div>
+          <div class="field">
             <label>Data de Fim do Torneio</label>
-            <input type="datetime-local" id="torneio-fim">
+            <input type="datetime-local" id="torneio-fim" value="${torneioData ? formatDateTimeLocal(torneioData.data_fim) : ''}">
           </div>
         </div>
-        <div>
+        <div class="field">
           <label>Máximo de Participantes *</label>
-          <input type="number" id="torneio-max-participantes" min="2" value="16" required>
+          <input type="number" id="torneio-max-participantes" min="2" value="${torneioData ? (torneioData.max_participantes || 16) : 16}" required>
         </div>
-        <div>
+        <div class="field">
           <label>Status *</label>
           <select id="torneio-status" required>
-            <option value="inscricoes_abertas">Inscrições Abertas</option>
-            <option value="em_andamento">Em Andamento</option>
-            <option value="finalizado">Finalizado</option>
-            <option value="cancelado">Cancelado</option>
+            <option value="inscricoes_abertas" ${torneioData && torneioData.status === 'inscricoes_abertas' ? 'selected' : ''}>Inscrições Abertas</option>
+            <option value="em_andamento" ${torneioData && torneioData.status === 'em_andamento' ? 'selected' : ''}>Em Andamento</option>
+            <option value="finalizado" ${torneioData && torneioData.status === 'finalizado' ? 'selected' : ''}>Finalizado</option>
+            <option value="cancelado" ${torneioData && torneioData.status === 'cancelado' ? 'selected' : ''}>Cancelado</option>
           </select>
         </div>
-        <div>
+        <div class="field">
           <label>Regras</label>
-          <textarea id="torneio-regras" rows="4" placeholder="Regras do torneio..."></textarea>
+          <textarea id="torneio-regras" rows="4" placeholder="Regras do torneio...">${torneioData ? (torneioData.regras || '') : ''}</textarea>
         </div>
-        <div>
+        <div class="field">
           <label>Prêmio</label>
-          <textarea id="torneio-premio" rows="2" placeholder="Descrição do prêmio..."></textarea>
+          <textarea id="torneio-premio" rows="2" placeholder="Descrição do prêmio...">${torneioData ? (torneioData.premio || '') : ''}</textarea>
         </div>
         <div style="display: flex; gap: 1rem; margin-top: 1.5rem;">
-          <button type="submit" class="btn primary">
-            <i class="fa-solid fa-save"></i> Criar Torneio
+          <button type="submit" class="btn gold">
+            <i class="fa-solid fa-save"></i> ${isEdit ? 'Salvar Alterações' : 'Criar Torneio'}
           </button>
           <button type="button" class="btn outline" onclick="navegarPara('lista')">
             Cancelar
@@ -707,21 +782,30 @@
           premio: document.getElementById('torneio-premio').value || ''
         };
         
-        await apiRequest('/torneios/', {
-          method: 'POST',
-          body: JSON.stringify(data)
-        });
+        if (isEdit) {
+          await apiRequest(`/torneios/${torneioId}/`, {
+            method: 'PUT',
+            body: JSON.stringify(data)
+          });
+          showToast('Torneio atualizado com sucesso!', 'success');
+        } else {
+          await apiRequest('/torneios/', {
+            method: 'POST',
+            body: JSON.stringify(data)
+          });
+          showToast('Torneio criado com sucesso!', 'success');
+        }
         
-        showToast('Torneio criado com sucesso!', 'success');
         navegarPara('lista');
+        await carregarTorneiosGerenciar();
       } catch (error) {
-        showToast('Erro ao criar torneio: ' + error.message, 'error');
+        showToast(`Erro ao ${isEdit ? 'atualizar' : 'criar'} torneio: ` + error.message, 'error');
       }
     };
   };
 
   // Carregar torneios para gerenciar
-  const carregarTorneiosGerenciar = async () => {
+  window.carregarTorneiosGerenciar = async () => {
     try {
       const torneios = await apiRequest('/torneios/');
       const container = document.getElementById('lista-gerenciar-torneios');
@@ -745,13 +829,13 @@
               </div>
             </div>
             <div style="display: flex; gap: 0.5rem; flex-direction: column;">
-              <button class="btn outline small" onclick="verDetalhesTorneio(${torneio.id})">
+              <button class="btn gold small" onclick="verParticipantesTorneio(${torneio.id})">
                 <i class="fa-solid fa-eye"></i> Ver
               </button>
-              <button class="btn outline small" onclick="editarTorneioGerenciar(${torneio.id})">
+              <button class="btn gold small" onclick="editarTorneioGerenciar(${torneio.id})">
                 <i class="fa-solid fa-edit"></i> Editar
               </button>
-              <button class="btn outline small" onclick="deletarTorneio(${torneio.id})" style="color: #d32f2f;">
+              <button class="btn gold small" onclick="deletarTorneio(${torneio.id})" style="color: #000;">
                 <i class="fa-solid fa-trash"></i> Deletar
               </button>
             </div>
@@ -828,11 +912,95 @@
     }
   };
 
-  window.editarTorneioGerenciar = (torneioId) => {
-    showToast('Funcionalidade de edição em desenvolvimento', 'info');
+  window.editarTorneioGerenciar = async (torneioId) => {
+    navegarPara('criar');
+    await carregarFormCriarTorneio(torneioId);
+  };
+  
+  // Ver participantes do torneio (na lista de gerenciamento)
+  window.verParticipantesTorneio = async (torneioId) => {
+    try {
+      const torneio = await apiRequest(`/torneios/${torneioId}/`);
+      const participantes = torneio.participantes || [];
+      
+      const container = document.getElementById('lista-gerenciar-torneios');
+      
+      if (participantes.length === 0) {
+        container.innerHTML = `
+          <div class="card">
+            <h3 style="margin-bottom: 1rem;">Participantes do Torneio: ${torneio.nome}</h3>
+            <p class="muted">Nenhum participante inscrito neste torneio.</p>
+            <button class="btn gold" onclick="carregarTorneiosGerenciar()" style="margin-top: 1rem;">
+              <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+          </div>
+        `;
+        return;
+      }
+      
+      container.innerHTML = `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1.5rem;">
+            <h3 style="margin: 0;">Participantes do Torneio: ${torneio.nome}</h3>
+            <button class="btn gold" onclick="carregarTorneiosGerenciar()">
+              <i class="fa-solid fa-arrow-left"></i> Voltar
+            </button>
+          </div>
+          <div class="table-container">
+            <table class="table">
+              <thead>
+                <tr>
+                  <th>Nome</th>
+                  <th>Email</th>
+                  <th>Data de Inscrição</th>
+                  <th>Status</th>
+                  <th>Posição Final</th>
+                </tr>
+              </thead>
+              <tbody>
+                ${participantes.map(p => `
+                  <tr>
+                    <td>${p.usuario_nome || 'N/A'}</td>
+                    <td>${p.usuario_email || 'N/A'}</td>
+                    <td>${p.data_inscricao ? new Date(p.data_inscricao).toLocaleDateString('pt-BR') : 'N/A'}</td>
+                    <td>
+                      ${p.ativo ? '<span class="badge success">Ativo</span>' : '<span class="badge error">Inativo</span>'}
+                      ${p.eliminado ? '<span class="badge error">Eliminado</span>' : ''}
+                    </td>
+                    <td>${p.posicao_final ? `${p.posicao_final}º lugar` : '-'}</td>
+                  </tr>
+                `).join('')}
+              </tbody>
+            </table>
+          </div>
+          <div style="margin-top: 1rem; padding: 1rem; background: rgba(251, 191, 36, 0.1); border-radius: 8px;">
+            <strong>Total de Participantes:</strong> ${participantes.length} / ${torneio.max_participantes}
+          </div>
+        </div>
+      `;
+    } catch (error) {
+      console.error('Erro ao carregar participantes:', error);
+      showToast('Erro ao carregar participantes: ' + error.message, 'error');
+    }
   };
 
   window.deletarTorneio = async (torneioId) => {
+    if (window.showConfirm) {
+      window.showConfirm(
+        'Tem certeza que deseja deletar este torneio? Esta ação não pode ser desfeita.',
+        async () => {
+          try {
+            await apiRequest(`/torneios/${torneioId}/`, { method: 'DELETE' });
+            showToast('Torneio deletado com sucesso!', 'success');
+            await carregarTorneiosGerenciar();
+          } catch (error) {
+            showToast('Erro ao deletar torneio: ' + error.message, 'error');
+          }
+        }
+      );
+      return;
+    }
+    // Fallback para confirm nativo se showConfirm não existir
     if (!confirm('Tem certeza que deseja deletar este torneio? Esta ação não pode ser desfeita.')) {
       return;
     }
